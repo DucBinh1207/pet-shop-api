@@ -4,6 +4,7 @@ const USER_STATUS = {
     ACTIVE: 1,
     INACTIVE: 0,
     SUSPENDED: 2,
+    NULL_PASS: 3,
     // Add more statuses as needed
 };
 

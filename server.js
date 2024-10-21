@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const authRoutes = require("./routes/authRoutes");
+const petRoutes = require("./routes/petRoutes");
 
 const server = express();
 const PORT = 8000;
@@ -21,6 +22,7 @@ const writeDataToFile = (filePath, data) => {
 
 // Routes
 server.use("/api/auth", authRoutes);
+server.use("/api", petRoutes)
 
 server.get("/test", (req, res) => {
   res.json({ message: "Test route is working!" });
