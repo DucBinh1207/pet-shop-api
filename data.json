@@ -1,0 +1,294 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "id_category": "1",
+      "name": "Chó Husky Úc",
+      "description": "Chó blablabla",
+      "image": "https://www.bing.com/th?id=OIP.Vpgauy8xblHnrhVvVyawyAHaEl&w=174&h=106&c=8&rs=1&qlt=90&o=6&dpr=1.3&pid=3.1&rm=2",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 3.8
+    },
+    {
+      "id": "2",
+      "name": "Chó Ngao Tây Tạng",
+      "description": "Chó blablabla",
+      "image": "https://www.bing.com/th?id=OIP.UJxwG6U-s2-LiwIQSB4zTgHaHa&w=99&h=100&c=8&rs=1&qlt=90&o=6&dpr=1.3&pid=3.1&rm=2",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 5
+    },
+    {
+      "id": "3",
+      "name": "Chó Corgi",
+      "description": "Chó blablabla",
+      "image": "https://www.bing.com/th?id=OIP.TQO0WLP2cY0R-Vy5E_0WeAHaE7&w=139&h=102&c=8&rs=1&qlt=90&o=6&dpr=1.3&pid=3.1&rm=2",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 3
+    },
+    {
+      "id": "4",
+      "name": "Chó Poodles",
+      "description": "Chó blablabla",
+      "image": "https://www.bing.com/th?id=OIP.3zyJqX48DP9p68FHfMAawwHaJ3&w=154&h=206&c=8&rs=1&qlt=90&o=6&dpr=1.3&pid=3.1&rm=2",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 2
+    },
+    {
+      "id": "5",
+      "name": "Chó Daniel Tam",
+      "description": "Chó blablabla",
+      "image": "https://th.bing.com/th/id/OIP.Bkwwsow4Di-jBc5zvO6M4gHaLH?w=115&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 1
+    },
+    {
+      "id": "6",
+      "id_category": "2",
+      "name": "Thức ăn A",
+      "description": "Đồ ăn blablabla",
+      "image": "",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 1
+    },
+    {
+      "id": "7",
+      "id_category": "2",
+      "name": "Thức ăn B",
+      "description": "Đồ ăn blablabla",
+      "image": "",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 1
+    },
+    {
+      "id": "8",
+      "id_category": "2",
+      "name": "Thức ăn C",
+      "description": "Đồ ăn blablabla",
+      "image": "",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 1
+    },
+    {
+      "id": "9",
+      "id_category": "3",
+      "name": "Phụ kiện A",
+      "description": "Đồ ăn blablabla",
+      "image": "",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 1
+    },
+    {
+      "id": "10",
+      "id_category": "3",
+      "name": "Phụ kiện B",
+      "description": "Đồ ăn blablabla",
+      "image": "",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 2
+    },
+    {
+      "id": "11",
+      "id_category": "3",
+      "name": "Phụ kiện C",
+      "description": "Đồ ăn blablabla",
+      "image": "",
+      "status": 1,
+      "date_created": "vv",
+      "rating": 3
+    }
+  ],
+  "pet": [
+    {
+      "id": "1",
+      "id_product": "1",
+      "price": 20000
+    },
+    {
+      "id": "2",
+      "id_product": "2",
+      "price": 30000
+    },
+    {
+      "id": "3",
+      "id_product": "3",
+      "price": 40000
+    },
+    {
+      "id": "4",
+      "id_product": "4",
+      "price": 50000
+    },
+    {
+      "id": "5",
+      "id_product": "5",
+      "price": 60000
+    }
+  ],
+  "food": [
+    {
+      "id": "1",
+      "id_product": "6",
+      "ingredient": "Gà",
+      "weight": "5kg",
+      "price": 40000
+    },
+    {
+      "id": "2",
+      "id_product": "6",
+      "ingredient": "Bò",
+      "weight": "10kg",
+      "price": 40000
+    },
+    {
+      "id": "3",
+      "id_product": "7",
+      "ingredient": "Bò",
+      "weight": "5kg",
+      "price": 50000
+    },
+    {
+      "id": "3",
+      "id_product": "8",
+      "ingredient": "Gà",
+      "weight": "15kg",
+      "price": 50000
+    },
+    {
+      "id": "4",
+      "id_product": "8",
+      "ingredient": "Bò",
+      "weight": "5kg",
+      "price": 40000
+    }
+  ],
+  "supplies": [
+    {
+      "id": "1",
+      "id_product": "9",
+      "color": "Sáng",
+      "size": "Nhỏ",
+      "price": 40000
+    },
+    {
+      "id": "2",
+      "id_product": "9",
+      "color": "Sáng",
+      "size": "Trung bình",
+      "price": 50000
+    },
+    {
+      "id": "3",
+      "id_product": "9",
+      "color": "Tối",
+      "size": "Lớn",
+      "price": 60000
+    },
+    {
+      "id": "4",
+      "id_product": "10",
+      "color": "Sáng",
+      "size": "Nhỏ",
+      "price": 40000
+    },
+    {
+      "id": "5",
+      "id_product": "10",
+      "color": "Sáng",
+      "size": "Trung bình",
+      "price": 50000
+    },
+    {
+      "id": "6",
+      "id_product": "11",
+      "color": "Sáng",
+      "size": "Nhỏ",
+      "price": 40000
+    },
+    {
+      "id": "7",
+      "id_product": "11",
+      "color": "Sáng",
+      "size": "Lớn",
+      "price": 60000
+    }
+  ],
+  "carts": [
+    {
+      "id": 1
+    }
+  ],
+  "users": [
+    {
+      "id": "123",
+      "email": "tdv1@gmail.com",
+      "password": "123",
+      "name": "Daniel Tam",
+      "role": "admin",
+      "telephone_number": "0905178953",
+      "province": "Đà Nẵng",
+      "district": "Hải Châu",
+      "ward": "Hoà Cường",
+      "street": "23 Nguyễn Du",
+      "image": "https://res.cloudinary.com/ds0yzgajv/image/upload/v1728408081/twedmdql6vcie075njuf.jpg",
+      "status": 1,
+      "nationality": "South Korea"
+    },
+    {
+      "id": "1728392629427",
+      "email": "tdv2@gmail.com",
+      "password": "123",
+      "name": "aaa",
+      "role": "user",
+      "province": "Hà Nội",
+      "district": "",
+      "ward": "",
+      "street": "",
+      "image": "https://res.cloudinary.com/ds0yzgajv/image/upload/v1728580266/dc5s9dwkjwqcx8gtdzni.jpg",
+      "status": 1,
+      "telephone_number": "",
+      "nationality": "Vietnam"
+    },
+    {
+      "email": "b@gmail.com",
+      "password": "$2a$10$9FRw11.VAgKW2r2HSbdCe.Ry9PfSk9ve.Mbl9p4CYMgQWDDFb3IsS",
+      "role": 1,
+      "id": "LF3FUBJ"
+    },
+    {
+      "email": "bc@gmail.com",
+      "password": "$2a$10$uicKnHbda/Uum5qpXrneOev2QR9OGsjaed./l1YKEI7N8XQjPZ14G",
+      "role": 1,
+      "id": "blwxqNC"
+    }
+  ],
+  "comments": [
+    {
+      "userName": "Daniel Tam",
+      "rating": 4,
+      "content": "Sản phẩm tốt đó",
+      "time": "24/10/2022"
+    },
+    {
+      "userName": "3 Ga`",
+      "rating": 2,
+      "content": "Sản phẩm quá tệ",
+      "time": "24/10/2023"
+    },
+    {
+      "userName": "BRB",
+      "rating": 5,
+      "content": "Sản phẩm quá tuyệt vời",
+      "time": "22/6/2022"
+    }
+  ]
+}
