@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const { sql, poolPromise } = require('../db');
 const nodemailer = require('nodemailer');
 const SECRET_KEY = '0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1';
+const REFRESH_TOKEN_SECRET = '3b0e8e94c2f7f5f6c5b7c3f1ab9b8f59a1c60b2d0b3b5e2d67a1c46f7e53ff19';
 const { client } = require('../db')
 
 // Hash the password for registration
