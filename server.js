@@ -1,54 +1,55 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const authRoutes = require("./routes/authRoutes");
-const petRoutes = require("./routes/petRoutes");
+const express = require('express');
+const { MongoClient, ServerApiVersion } = require('mongodb');
+const authRoutes = require('./routes/authRoutes'); // Import module route
 
-const server = express();
-const PORT = 8000;
+const app = express();
+const port = 8000; // Port để lắng nghe
 
-server.use(bodyParser.json());
-server.use(bodyParser.urlencoded({ extended: true }));
+const uri = "mongodb+srv://tdv0905179758:qMdBYWg45uwOUz9F@viet.fn3ykhs.mongodb.net/?retryWrites=true&w=majority&appName=Viet";
 
-const fs = require("fs");
-
-const readDataFromFile = (filePath) => {
-  const data = fs.readFileSync(filePath);
-  return JSON.parse(data);
-};
-
-const writeDataToFile = (filePath, data) => {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-};
-
-// Routes
-server.use("/api/auth", authRoutes);
-server.use("/api", petRoutes)
-
-server.get("/test", (req, res) => {
-  res.json({ message: "Test route is working!" });
-});
-
-server.use((req, res, next) => {
-  if (req.method === "POST") {
-    req.body.createdAt = Date.now();
-    req.body.updatedAt = Date.now();
+// Tạo một MongoClient với MongoClientOptions object để cài đặt Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
   }
-  next();
 });
 
-server.get("/api/products", (req, res) => {
-  const products = readDataFromFile("data.json").products || [];
-  res.json(products);
+// Middleware để parse JSON body
+app.use(express.json());
+
+// Kết nối đến MongoDB khi khởi động server
+async function connectToMongoDB() {
+  try {
+    await client.connect();
+    console.log("Connected to MongoDB successfully!");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
+}
+
+// Route mặc định
+app.get('/', (req, res) => {
+  res.send('Hello from Express server!');
 });
 
-server.post("/api/products", (req, res) => {
-  const products = readDataFromFile("data.json").products || [];
-  const newProduct = req.body;
-  products.push(newProduct);
-  writeDataToFile("data.json", { products });
-  res.status(201).json(newProduct);
+// Route kiểm tra kết nối MongoDB
+app.get('/pingMongo', async (req, res) => {
+  try {
+    await client.db("admin").command({ ping: 1 });
+    res.send("Pinged MongoDB deployment. Successfully connected!");
+  } catch (error) {
+    res.status(500).send("Failed to ping MongoDB: " + error);
+  }
 });
 
-server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+// Dẫn các route liên quan đến xác thực sang authRoutesMongo.js
+app.use('/api/auth', authRoutes); // Thêm tiền tố '/auth' cho các route xác thực
+app.use(express.static('public'));
+
+// Khởi động server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+  connectToMongoDB(); // Kết nối tới MongoDB khi server khởi động
 });
