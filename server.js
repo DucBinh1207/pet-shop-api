@@ -1,6 +1,8 @@
 const express = require('express');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const authRoutes = require('./routes/authRoutes'); // Import module route
+const cartRoutes = require('./routes/cartItemRoutesMongo'); // Import module route
+const orderRoutes = require('./routes/orderRoutesMongo'); // Import module route
 
 const app = express();
 const port = 8000; // Port để lắng nghe
@@ -46,6 +48,8 @@ app.get('/pingMongo', async (req, res) => {
 
 // Dẫn các route liên quan đến xác thực sang authRoutesMongo.js
 app.use('/api/auth', authRoutes); // Thêm tiền tố '/auth' cho các route xác thực
+app.use('/api', cartRoutes);
+app.use('/api', orderRoutes);
 app.use(express.static('public'));
 
 // Khởi động server
