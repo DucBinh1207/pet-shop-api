@@ -70,8 +70,4 @@ app.use("/api", orderRoutes);
 app.use(express.static("public"));
 
 
-// Khởi động server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-  connectToMongoDB(); // Kết nối tới MongoDB khi server khởi động
-});
+
