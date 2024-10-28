@@ -12,7 +12,7 @@ const cors = require("cors");
 
 
 const app = express();
-const port = process.env.PORT || 8000
+const port = 8000
 
 
 const uri = "mongodb+srv://tdv0905179758:qMdBYWg45uwOUz9F@viet.fn3ykhs.mongodb.net/?retryWrites=true&w=majority&appName=Viet";
