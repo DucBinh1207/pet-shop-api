@@ -12,7 +12,7 @@ const cors = require("cors");
 
 
 const app = express();
-const port = 8000; // Port để lắng nghe
+const port = process.env.PORT || 8000
 
 
 const uri = "mongodb+srv://tdv0905179758:qMdBYWg45uwOUz9F@viet.fn3ykhs.mongodb.net/?retryWrites=true&w=majority&appName=Viet";
@@ -69,5 +69,9 @@ app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
 app.use(express.static("public"));
 
-
+// Khởi động server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+  connectToMongoDB(); // Kết nối tới MongoDB khi server khởi động
+});
 
