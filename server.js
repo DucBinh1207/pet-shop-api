@@ -7,6 +7,8 @@ const foodRoutes = require("./routes/foodRoutes"); // Import module route
 const supplyRoutes = require("./routes/supplyRoutes"); // Import module route
 const cartRoutes = require("./routes/cartItemRoutesMongo"); // Import module route
 const orderRoutes = require("./routes/orderRoutesMongo"); // Import module route
+const cors = require("cors");
+
 
 
 const app = express();
@@ -27,6 +29,7 @@ const client = new MongoClient(uri, {
 
 // Middleware để parse JSON body
 app.use(express.json());
+app.use(cors({ origin: "*" }));
 
 // Kết nối đến MongoDB khi khởi động server
 async function connectToMongoDB() {
