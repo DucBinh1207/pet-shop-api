@@ -47,7 +47,7 @@ async function registerUser(email, id_role) {
     await usersCollection.insertOne(newUser);
 
     const token = jwt.sign({ userId, email }, SECRET_KEY, { expiresIn: '1h' });
-    const verificationLink = `http://localhost:3000/reset-password?token=${token}`;
+    const verificationLink = `${process.env.END_USER_URL}/reset-password?token=${token}`;
     await sendVerificationEmail(email, verificationLink);
 
     return { success: true, message: 'User registered successfully! Please verify your email.' };
