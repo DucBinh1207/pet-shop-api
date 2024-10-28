@@ -146,7 +146,7 @@ async function resendVerificationEmail(userId, email) {
 
     // Generate a new token and send verification email
     const token = jwt.sign({ userId, email }, SECRET_KEY, { expiresIn: '1h' });
-    const verificationLink = `http://localhost:8000/api/auth/verify-email?token=${token}`;
+    const verificationLink = `http://localhost:3000/reset-password?token=${token}`;
 
     await sendVerificationEmail(email, verificationLink);
 

@@ -3,17 +3,25 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { loginUser, registerUser, verifyEmail, generateTokens } = require("../auth/auth");
+const {
+  loginUser,
+  registerUser,
+  verifyEmail,
+  generateTokens,
+} = require("../auth/auth");
 // const { sql, poolPromise } = require("../db");
 const router = express.Router();
-const { USER_STATUS, USER_VERIFICATION } = require('../status_constant/users_status');
-const { client } = require('../db')
-const nodemailer = require('nodemailer');
+const {
+  USER_STATUS,
+  USER_VERIFICATION,
+} = require("../status_constant/users_status");
+const { client } = require("../db");
+const nodemailer = require("nodemailer");
 
 const SECRET_KEY =
   "0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1";
 
-router.post('/login', async (req, res) => {
+router.post("/login", async (req, res) => {
   const { email, password, isRememberMe } = req.body; // Add isRememberMe to the request body
 
   try {
@@ -24,14 +32,19 @@ router.post('/login', async (req, res) => {
       const user = result.user;
 
       // Generate access and refresh tokens
-      const { accessToken, refreshToken } = generateTokens(user._id, isRememberMe);
+      const { accessToken, refreshToken } = generateTokens(
+        user._id,
+        isRememberMe
+      );
 
       // Set refresh token as an HTTP-only cookie
-      res.cookie('refreshToken', refreshToken, {
+      res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
-        sameSite: 'Strict', // Prevent CSRF attacks
-        maxAge: isRememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 24 * 60 * 60 * 1000, // 30d or 2d in milliseconds
+        secure: process.env.NODE_ENV === "production", // Use secure cookies in production (HTTPS)
+        sameSite: "Strict", // Prevent CSRF attacks
+        maxAge: isRememberMe
+          ? 30 * 24 * 60 * 60 * 1000
+          : 2 * 24 * 60 * 60 * 1000, // 30d or 2d in milliseconds
       });
 
       // Send response with access token and user data
@@ -48,7 +61,7 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     // Status 500 for internal server errors
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -92,7 +105,7 @@ router.get("/verify-email", async (req, res) => {
   const token = req.query.token;
 
   try {
-    const decoded = jwt.verify(token, SECRET_KEY);  // Verify token
+    const decoded = jwt.verify(token, SECRET_KEY); // Verify token
     const { userId, email } = decoded;
 
     await client.connect();
@@ -103,16 +116,24 @@ router.get("/verify-email", async (req, res) => {
     const user = await usersCollection.findOne({ _id: userId, email: email });
 
     if (!user || user.is_verified) {
-      return res.status(400).json({ message: 'Invalid or expired token.' });
+      return res.status(400).json({ message: "Invalid or expired token." });
     }
 
     // Update the user as verified
-    await usersCollection.updateOne({ _id: userId }, { $set: { is_verified: true, status: USER_STATUS.ACTIVE } });
+    await usersCollection.updateOne(
+      { _id: userId },
+      { $set: { is_verified: true, status: USER_STATUS.ACTIVE } }
+    );
 
     // Generate a token for setting the password
-    const passwordToken = jwt.sign({ userId }, SECRET_KEY, { expiresIn: '1h' });
+    const passwordToken = jwt.sign({ userId }, SECRET_KEY, { expiresIn: "1h" });
 
-    res.status(200).json({ token: passwordToken, message: "Email verified! You can now set your password." });
+    res
+      .status(200)
+      .json({
+        token: passwordToken,
+        message: "Email verified! You can now set your password.",
+      });
 
     // Optionally, you can redirect the user to a password-setting page:
     // res.redirect(`/set-password?userId=${userId}`);
@@ -145,7 +166,7 @@ router.get("/verify-email", async (req, res) => {
 // });
 
 router.post("/verify-token", async (req, res) => {
-  const token = req.query.token; // Use query parameter or request body for token
+  const { token } = req.body; // Use query parameter or request body for token
 
   try {
     // Verify the token using JWT
@@ -155,26 +176,26 @@ router.post("/verify-token", async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Token is valid.",
-      userId: decoded.userId,  // Assuming the token contains userId
-      email: decoded.email     // Assuming the token contains email
+      userId: decoded.userId, // Assuming the token contains userId
+      email: decoded.email, // Assuming the token contains email
     });
   } catch (err) {
     // Handle different types of JWT errors
-    if (err.name === 'TokenExpiredError') {
+    if (err.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
-        message: "Token has expired. Please request a new token."
+        message: "Token has expired. Please request a new token.",
       });
-    } else if (err.name === 'JsonWebTokenError') {
+    } else if (err.name === "JsonWebTokenError") {
       return res.status(401).json({
         success: false,
-        message: "Invalid token."
+        message: "Invalid token.",
       });
     } else {
       console.error(err);
       return res.status(500).json({
         success: false,
-        message: "Internal server error."
+        message: "Internal server error.",
       });
     }
   }
@@ -214,13 +235,15 @@ router.post("/verify-token", async (req, res) => {
 // });
 
 router.post("/set-password", async (req, res) => {
-  const authHeader = req.headers.authorization;  // Get the Authorization header
+  const authHeader = req.headers.authorization; // Get the Authorization header
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authorization token missing or invalid.' });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res
+      .status(401)
+      .json({ message: "Authorization token missing or invalid." });
   }
 
-  const token = authHeader.split(' ')[1];  // Extract the token from 'Bearer <token>'
+  const token = authHeader.split(" ")[1]; // Extract the token from 'Bearer <token>'
   const { newPassword } = req.body;
 
   try {
@@ -248,85 +271,88 @@ router.post("/set-password", async (req, res) => {
   }
 });
 
-router.post('/request-password-reset', async (req, res) => {
+router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
 
   try {
-      await client.connect();
-      const database = client.db('PBL6');
-      const usersCollection = database.collection('users');
-      
-      const user = await usersCollection.findOne({ email });
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-      }
+    await client.connect();
+    const database = client.db("PBL6");
+    const usersCollection = database.collection("users");
 
-      // Generate reset token
-      const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '1h' });
+    const user = await usersCollection.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-      // Store the token in MongoDB with the user
-      await usersCollection.updateOne(
-          { _id: user._id },
-          { $set: { resetToken: token } }
-      );
-      
-      // Send reset password email
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: 'khongquen012@gmail.com',
-          pass: 'zoijiuykwjnueeju'
-        }
-      });
-      
-      const resetLink = `http://localhost:8000/api/auth/reset-password?token=${token}`;
-      
-      const mailOptions = {
-        from: 'khongquen012@gmail.com',
-        to: email,
-        subject: 'Password Reset Request',
-        text: `Click the link to reset your password: ${resetLink}`,
-      };
-      
-      await transporter.sendMail(mailOptions);
-      res.status(200).json({ message: 'Reset password link sent to your email' });
+    // Generate reset token
+    const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: "1h" });
+
+    // Store the token in MongoDB with the user
+    await usersCollection.updateOne(
+      { _id: user._id },
+      { $set: { resetToken: token } }
+    );
+
+    // Send reset password email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "khongquen012@gmail.com",
+        pass: "zoijiuykwjnueeju",
+      },
+    });
+
+    const resetLink = `http://localhost:8000/api/auth/reset-password?token=${token}`;
+
+    const mailOptions = {
+      from: "khongquen012@gmail.com",
+      to: email,
+      subject: "Password Reset Request",
+      text: `Click the link to reset your password: ${resetLink}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "Reset password link sent to your email" });
   } catch (error) {
-      res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: "Server error", error });
   } finally {
-      await client.close();
+    await client.close();
   }
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post("/reset-password", async (req, res) => {
   const { token } = req.query;
   const { password } = req.body;
 
   try {
-      const decoded = jwt.verify(token, SECRET_KEY);
+    const decoded = jwt.verify(token, SECRET_KEY);
 
-      await client.connect();
-      const database = client.db('PBL6');
-      const usersCollection = database.collection('users');
-      
-      const user = await usersCollection.findOne({ _id: decoded.id, resetToken: token });
-      if (!user) {
-          return res.status(400).json({ message: 'Invalid or expired token' });
-      }
+    await client.connect();
+    const database = client.db("PBL6");
+    const usersCollection = database.collection("users");
 
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await usersCollection.findOne({
+      _id: decoded.id,
+      resetToken: token,
+    });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
 
-      // Update user's password and clear resetToken
-      await usersCollection.updateOne(
-          { _id: user._id },
-          { $set: { password: hashedPassword }, $unset: { resetToken: "" } }
-      );
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      res.status(200).json({ message: 'Password successfully reset' });
+    // Update user's password and clear resetToken
+    await usersCollection.updateOne(
+      { _id: user._id },
+      { $set: { password: hashedPassword }, $unset: { resetToken: "" } }
+    );
+
+    res.status(200).json({ message: "Password successfully reset" });
   } catch (error) {
-      res.status(400).json({ message: 'Error resetting password', error });
+    res.status(400).json({ message: "Error resetting password", error });
   } finally {
-      await client.close();
+    await client.close();
   }
 });
 
