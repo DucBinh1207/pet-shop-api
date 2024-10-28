@@ -29,7 +29,7 @@ const client = new MongoClient(uri, {
 
 // Middleware để parse JSON body
 app.use(express.json());
-app.use(cors({ origin: "*" }));
+app.use(cors({ credentials: true,origin: "*" }));
 
 // Kết nối đến MongoDB khi khởi động server
 async function connectToMongoDB() {
