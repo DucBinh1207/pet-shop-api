@@ -7,7 +7,7 @@ const {
   loginUser,
   registerUser,
   verifyEmail,
-  generateTokens,
+  generateToken,
 } = require("../auth/auth");
 // const { sql, poolPromise } = require("../db");
 const router = express.Router();
@@ -20,7 +20,7 @@ const nodemailer = require("nodemailer");
 
 const SECRET_KEY =
   "0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1";
-
+//Đăng nhập
 router.post("/login", async (req, res) => {
   const { email, password, isRememberMe } = req.body; // Add isRememberMe to the request body
 
@@ -32,22 +32,9 @@ router.post("/login", async (req, res) => {
       const user = result.user;
 
       // Generate access and refresh tokens
-      const { accessToken, refreshToken } = generateTokens(
-        user._id,
-        isRememberMe
-      );
+      const accessToken = generateToken(user._id, isRememberMe);
 
-      // Set refresh token as an HTTP-only cookie
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Use secure cookies in production (HTTPS)
-        sameSite: "Strict", // Prevent CSRF attacks
-        maxAge: isRememberMe
-          ? 30 * 24 * 60 * 60 * 1000
-          : 2 * 24 * 60 * 60 * 1000, // 30d or 2d in milliseconds
-      });
-
-      // Send response with access token and user data
+      // Trả về phản hồi với access token và thông tin người dùng
       res.status(200).json({
         token: accessToken,
         email: user.email,
@@ -64,7 +51,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
+//Đăng ký
 router.post("/register", async (req, res) => {
   const { email, id_role } = req.body;
 
@@ -72,7 +59,7 @@ router.post("/register", async (req, res) => {
     const result = await registerUser(email, id_role);
 
     if (result.success) {
-      res.status(201).json({ message: result.message });
+      res.status(200).json({ message: result.message });
     } else {
       res.status(401).json({ message: result.message });
     }
@@ -81,90 +68,7 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
-// router.get("/verify-email", async (req, res) => {
-//   const token = req.query.token;
-
-//   try {
-//     const result = await verifyEmail(token);
-//     const decoded = jwt.verify(token, SECRET_KEY);
-//     if (result.success) {
-//       res.redirect(`/create-new-password?email=${decoded.email}`);
-
-//       res.status(201).json({ message: result.message });
-//     } else {
-//       res.status(401).json({ message: result.message });
-//     }
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// });
-
-router.get("/verify-email", async (req, res) => {
-  const token = req.query.token;
-
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY); // Verify token
-    const { userId, email } = decoded;
-
-    await client.connect();
-    const database = client.db("PBL6");
-    const usersCollection = database.collection("users");
-
-    // Find the user by ID and email
-    const user = await usersCollection.findOne({ _id: userId, email: email });
-
-    if (!user || user.is_verified) {
-      return res.status(400).json({ message: "Invalid or expired token." });
-    }
-
-    // Update the user as verified
-    await usersCollection.updateOne(
-      { _id: userId },
-      { $set: { is_verified: true, status: USER_STATUS.ACTIVE } }
-    );
-
-    // Generate a token for setting the password
-    const passwordToken = jwt.sign({ userId }, SECRET_KEY, { expiresIn: "1h" });
-
-    res
-      .status(200)
-      .json({
-        token: passwordToken,
-        message: "Email verified! You can now set your password.",
-      });
-
-    // Optionally, you can redirect the user to a password-setting page:
-    // res.redirect(`/set-password?userId=${userId}`);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ message: "Invalid or expired token." });
-  } finally {
-    await client.close();
-  }
-});
-
-// router.post("/verify-token", async (req, res) => {
-//   const token = req.query.token;
-
-//   try {
-//     // const result = await verifyEmail(token);
-//     const decoded = jwt.verify(token, SECRET_KEY);
-
-//     // if (result.success) {
-//     //   // Redirect to reset password page with email
-//     //   // res.redirect(`/api/auth/reset-password?token=${token}`);
-//     //   res.status(201).json({ message: result.message });
-//     // } else {
-//     //   res.status(401).json({ message: result.message });
-//     // }
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// });
-
+//Xác thực token từ web
 router.post("/verify-token", async (req, res) => {
   const { token } = req.body; // Use query parameter or request body for token
 
@@ -200,78 +104,8 @@ router.post("/verify-token", async (req, res) => {
     }
   }
 });
-
-// router.post("/reset-password", async (req, res) => {
-//   const { newPassword } = req.body;
-//   const token = req.query.token;
-
-//   try {
-//     const decoded = jwt.verify(token, SECRET_KEY);
-
-//     const saltRounds = 10;
-//     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-//     await client.connect();
-//     const database = client.db("PBL6");
-//     const usersCollection = database.collection("users");
-
-//     // Update password in MongoDB
-//     const updateResult = await usersCollection.updateOne(
-//       { _id: decoded.userId },
-//       { $set: { password: hashedPassword, status: USER_STATUS.ACTIVE, is_verified: USER_VERIFICATION.VERIFIED } } // Update status to active
-//     );
-
-//     if (updateResult.modifiedCount === 1) {
-//       res.status(200).json({ success: true, message: "Password reset successfully!" });
-//     } else {
-//       res.status(404).json({ success: false, message: "User not found." });
-//     }
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Error resetting password." });
-//   } finally {
-//     await client.close();
-//   }
-// });
-
-router.post("/set-password", async (req, res) => {
-  const authHeader = req.headers.authorization; // Get the Authorization header
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ message: "Authorization token missing or invalid." });
-  }
-
-  const token = authHeader.split(" ")[1]; // Extract the token from 'Bearer <token>'
-  const { newPassword } = req.body;
-
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    const userId = decoded.userId;
-
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-    await client.connect();
-    const database = client.db("PBL6");
-    const usersCollection = database.collection("users");
-
-    await usersCollection.updateOne(
-      { _id: userId },
-      { $set: { password: hashedPassword, status: USER_STATUS.ACTIVE } }
-    );
-
-    res.status(200).json({ message: "Password set successfully!" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error setting password." });
-  } finally {
-    await client.close();
-  }
-});
-
-router.post("/request-password-reset", async (req, res) => {
+//Quên mật khẩu
+router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
 
   try {
@@ -319,43 +153,61 @@ router.post("/request-password-reset", async (req, res) => {
     await client.close();
   }
 });
+//Đặt mật khẩu khi vừa mới đăng ký
+router.put('/change-password', async (req, res) => {
+  const authHeader = req.headers.authorization; // Get the Authorization header
 
-router.post("/reset-password", async (req, res) => {
-  const { token } = req.query;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res
+      .status(401)
+      .json({ message: "Authorization token missing or invalid." });
+  }
+  const token = authHeader.split(" ")[1]; // Extract the token from 'Bearer <token>'
   const { password } = req.body;
 
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
+    const userId = decoded.id;
 
-    await client.connect();
-    const database = client.db("PBL6");
-    const usersCollection = database.collection("users");
+    const saltRounds = 10;
+    const salt = await bcrypt.genSalt(saltRounds);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = await usersCollection.findOne({
-      _id: decoded.id,
-      resetToken: token,
-    });
+    const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+    const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
+
+    // Tìm người dùng theo _id từ MongoDB
+    console.log("userId (from token):", userId); // Log ra giá trị userId
+    const user = await usersCollection.findOne({ _id: userId, status: 3 });
+
     if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token" });
+      return res.status(404).jsonp({ message: "Người dùng không tồn tại" });
     }
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log(user.password);
+    console.log({hashedPassword});
+    // Kiểm tra mật khẩu cũ
 
-    // Update user's password and clear resetToken
-    await usersCollection.updateOne(
-      { _id: user._id },
-      { $set: { password: hashedPassword }, $unset: { resetToken: "" } }
+    if (await bcrypt.compare(password, user.password)) {
+      return res.status(400).jsonp({ message: "Mật khẩu mới không được trùng với mật khẩu hiện tại" });
+    }
+    // Cập nhật mật khẩu mới
+    const updateResult = await usersCollection.updateOne(
+      { _id: userId },  // Tìm người dùng theo _id
+      { $set: { password: hashedPassword } }, // Cập nhật mật khẩu
+      { status: 1}
     );
 
-    res.status(200).json({ message: "Password successfully reset" });
+    if (updateResult.modifiedCount > 0) {
+      res.status(200).jsonp({ message: "Cập nhật mật khẩu thành công" });
+    } else {
+      res.status(500).jsonp({ message: "Đã có lỗi xảy ra trong quá trình thay đổi mật khẩu" });
+    }
   } catch (error) {
-    res.status(400).json({ message: "Error resetting password", error });
-  } finally {
-    await client.close();
+    console.error('Error changing password:', error); // In ra lỗi nếu có
+    res.status(500).jsonp({ message: "Lỗi máy chủ", error });
   }
 });
-
 // Route Hello World
 router.get("/test", (req, res) => {
   res.json({ message: "Hello, World!" });

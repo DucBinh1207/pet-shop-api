@@ -7,7 +7,7 @@ const nodemailer = require('nodemailer');
 const SECRET_KEY = '0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1';
 const REFRESH_TOKEN_SECRET = '3b0e8e94c2f7f5f6c5b7c3f1ab9b8f59a1c60b2d0b3b5e2d67a1c46f7e53ff19';
 const { client } = require('../db')
-
+require("dotenv").config();
 // Hash the password for registration
 async function registerUser(email, id_role) {
   try {
@@ -206,22 +206,14 @@ async function verifyEmail(token) {
   }
 }
 
-function generateTokens(userId, isRememberMe) {
-  const accessToken = jwt.sign({ id: userId }, SECRET_KEY, {
-    expiresIn: '1h', // Access token expires in 1 hour
-  });
-
-  const refreshTokenExpiry = isRememberMe ? '30d' : '2d';
-  const refreshToken = jwt.sign({ id: userId }, REFRESH_TOKEN_SECRET, {
-    expiresIn: refreshTokenExpiry, // 30d if "Remember Me" is true, otherwise 2d
-  });
-
-  return { accessToken, refreshToken };
+function generateToken(userId, isRememberMe) {
+  const expiresIn = isRememberMe ? "30d" : "1h"; // 30 ngày hoặc 1 giờ
+  return jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, { expiresIn });
 }
 
 module.exports = {
   registerUser,
   loginUser,
   verifyEmail,
-  generateTokens
+  generateToken
 };
