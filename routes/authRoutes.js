@@ -252,48 +252,48 @@ router.post('/request-password-reset', async (req, res) => {
   const { email } = req.body;
 
   try {
-      await client.connect();
-      const database = client.db('PBL6');
-      const usersCollection = database.collection('users');
-      
-      const user = await usersCollection.findOne({ email });
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
+    await client.connect();
+    const database = client.db('PBL6');
+    const usersCollection = database.collection('users');
+
+    const user = await usersCollection.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate reset token
+    const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '1h' });
+
+    // Store the token in MongoDB with the user
+    await usersCollection.updateOne(
+      { _id: user._id },
+      { $set: { resetToken: token } }
+    );
+
+    // Send reset password email
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'khongquen012@gmail.com',
+        pass: 'zoijiuykwjnueeju'
       }
+    });
 
-      // Generate reset token
-      const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '1h' });
+    const resetLink = `http://localhost:8000/api/auth/reset-password?token=${token}`;
 
-      // Store the token in MongoDB with the user
-      await usersCollection.updateOne(
-          { _id: user._id },
-          { $set: { resetToken: token } }
-      );
-      
-      // Send reset password email
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: 'khongquen012@gmail.com',
-          pass: 'zoijiuykwjnueeju'
-        }
-      });
-      
-      const resetLink = `http://localhost:8000/api/auth/reset-password?token=${token}`;
-      
-      const mailOptions = {
-        from: 'khongquen012@gmail.com',
-        to: email,
-        subject: 'Password Reset Request',
-        text: `Click the link to reset your password: ${resetLink}`,
-      };
-      
-      await transporter.sendMail(mailOptions);
-      res.status(200).json({ message: 'Reset password link sent to your email' });
+    const mailOptions = {
+      from: 'khongquen012@gmail.com',
+      to: email,
+      subject: 'Password Reset Request',
+      text: `Click the link to reset your password: ${resetLink}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'Reset password link sent to your email' });
   } catch (error) {
-      res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: 'Server error', error });
   } finally {
-      await client.close();
+    await client.close();
   }
 });
 
@@ -302,31 +302,31 @@ router.post('/reset-password', async (req, res) => {
   const { password } = req.body;
 
   try {
-      const decoded = jwt.verify(token, SECRET_KEY);
+    const decoded = jwt.verify(token, SECRET_KEY);
 
-      await client.connect();
-      const database = client.db('PBL6');
-      const usersCollection = database.collection('users');
-      
-      const user = await usersCollection.findOne({ _id: decoded.id, resetToken: token });
-      if (!user) {
-          return res.status(400).json({ message: 'Invalid or expired token' });
-      }
+    await client.connect();
+    const database = client.db('PBL6');
+    const usersCollection = database.collection('users');
 
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await usersCollection.findOne({ _id: decoded.id, resetToken: token });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
 
-      // Update user's password and clear resetToken
-      await usersCollection.updateOne(
-          { _id: user._id },
-          { $set: { password: hashedPassword }, $unset: { resetToken: "" } }
-      );
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      res.status(200).json({ message: 'Password successfully reset' });
+    // Update user's password and clear resetToken
+    await usersCollection.updateOne(
+      { _id: user._id },
+      { $set: { password: hashedPassword }, $unset: { resetToken: "" } }
+    );
+
+    res.status(200).json({ message: 'Password successfully reset' });
   } catch (error) {
-      res.status(400).json({ message: 'Error resetting password', error });
+    res.status(400).json({ message: 'Error resetting password', error });
   } finally {
-      await client.close();
+    await client.close();
   }
 });
 
