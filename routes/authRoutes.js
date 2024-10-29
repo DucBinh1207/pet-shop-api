@@ -172,20 +172,23 @@ router.put('/change-password', async (req, res) => {
     const saltRounds = 10;
     const salt = await bcrypt.genSalt(saltRounds);
     const hashedPassword = await bcrypt.hash(password, salt);
-    
+
     await client.connect();
     const db = client.db("PBL6"); // Kết nối tới database "PBL6"
     const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
     // Tìm người dùng theo _id từ MongoDB
     console.log("userId (from token):", userId); // Log ra giá trị userId
-    const user = await usersCollection.findOne({ _id: userId, status: 3 });
+    const user = await usersCollection.findOne({ _id: userId});
 
     if (!user) {
       return res.status(404).jsonp({ message: "Người dùng không tồn tại" });
     }
-    
+
+    console.log(user.password);
+    console.log({hashedPassword});
     // Kiểm tra mật khẩu cũ
+
     if (await bcrypt.compare(password, user.password)) {
       return res.status(400).jsonp({ message: "Mật khẩu mới không được trùng với mật khẩu hiện tại" });
     }
