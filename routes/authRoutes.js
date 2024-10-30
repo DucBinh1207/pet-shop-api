@@ -167,7 +167,7 @@ router.put('/change-password', async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
-    const userId = decoded.id;
+    const userId = decoded.userId;
 
     const saltRounds = 10;
     const salt = await bcrypt.genSalt(saltRounds);
