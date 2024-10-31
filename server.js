@@ -1,42 +1,46 @@
-
 const express = require("express");
 const { MongoClient, ServerApiVersion } = require("mongodb");
-const authRoutes = require("./routes/authRoutes"); // Import module route
-const petRoutes = require("./routes/petRoutes"); // Import module route
-const foodRoutes = require("./routes/foodRoutes"); // Import module route
-const supplyRoutes = require("./routes/supplyRoutes"); // Import module route
-const cartRoutes = require("./routes/cartItemRoutesMongo"); // Import module route
-const orderRoutes = require("./routes/orderRoutesMongo"); // Import module route
+const authRoutes = require("./routes/authRoutes");
+const petRoutes = require("./routes/petRoutes");
+const foodRoutes = require("./routes/foodRoutes");
+const supplyRoutes = require("./routes/supplyRoutes");
+const cartRoutes = require("./routes/cartItemRoutesMongo");
+const orderRoutes = require("./routes/orderRoutesMongo");
 const cors = require("cors");
 
-
-
 const app = express();
-const port = 8000
-
+const port = 8000;
 
 const uri = "mongodb+srv://tdv0905179758:qMdBYWg45uwOUz9F@viet.fn3ykhs.mongodb.net/?retryWrites=true&w=majority&appName=Viet";
 
-// Tạo một MongoClient với MongoClientOptions object để cài đặt Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-
   }
 });
 
-// Middleware để parse JSON body
 app.use(express.json());
 app.use(
   cors({
     credentials: true,
-     origin: ['http://localhost:3000', 'http://localhost:3001','https://pet-shop-test-deploy.vercel.app'],
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://pet-shop-test-deploy.vercel.app'],
   })
 );
 
-// Kết nối đến MongoDB khi khởi động server
+// Middleware để log route và mã trả về mỗi khi được gọi
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    console.log(`Route: ${req.method} ${req.originalUrl} | Status: ${res.statusCode} | Time: ${duration}ms`);
+  });
+  
+  next();
+});
+
 async function connectToMongoDB() {
   try {
     await client.connect();
@@ -50,7 +54,6 @@ app.get('/', (req, res) => {
   res.send('Hello from Express server!');
 });
 
-// Route kiểm tra kết nối MongoDB
 app.get('/pingMongo', async (req, res) => {
   try {
     await client.db("admin").command({ ping: 1 });
@@ -60,8 +63,7 @@ app.get('/pingMongo', async (req, res) => {
   }
 });
 
-// Dẫn các route liên quan đến xác thực sang authRoutesMongo.js
-app.use("/api/auth", authRoutes); // Thêm tiền tố '/auth' cho các route xác thực
+app.use("/api/auth", authRoutes);
 app.use("/api", petRoutes);
 app.use("/api", foodRoutes);
 app.use("/api", supplyRoutes);
@@ -69,9 +71,13 @@ app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
 app.use(express.static("public"));
 
-// Khởi động server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-  connectToMongoDB(); // Kết nối tới MongoDB khi server khởi động
+// Middleware xử lý lỗi
+app.use((err, req, res, next) => {
+  console.error(`Error occurred on route ${req.method} ${req.originalUrl}:`, err);
+  res.status(500).json({ message: "Đã xảy ra lỗi trên máy chủ", error: err.message });
 });
 
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+  connectToMongoDB();
+});

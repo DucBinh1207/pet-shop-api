@@ -155,16 +155,11 @@ router.post("/forgot-password", async (req, res) => {
 });
 //Đặt mật khẩu khi vừa mới đăng ký
 router.put('/change-password', async (req, res) => {
-  const authHeader = req.headers.authorization; // Get the Authorization header
+  const { token, password } = req.body; // Lấy token và password từ body
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ message: "Authorization token missing or invalid." });
+  if (!token) {
+    return res.status(401).json({ message: "Token không hợp lệ hoặc không có." });
   }
-  const token = authHeader.split(" ")[1]; // Extract the token from 'Bearer <token>'
-  const { password } = req.body;
-
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     const userId = decoded.userId;
@@ -179,7 +174,7 @@ router.put('/change-password', async (req, res) => {
 
     // Tìm người dùng theo _id từ MongoDB
     console.log("userId (from token):", userId); // Log ra giá trị userId
-    const user = await usersCollection.findOne({ _id: userId});
+    const user = await usersCollection.findOne({ _id: userId });
 
     if (!user) {
       return res.status(404).jsonp({ message: "Người dùng không tồn tại" });
