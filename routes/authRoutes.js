@@ -188,7 +188,7 @@ router.put('/change-password', async (req, res) => {
     // Cập nhật mật khẩu mới
     const updateResult = await usersCollection.updateOne(
       { _id: userId },  // Tìm người dùng theo _id
-      { $set: { password: hashedPassword, status: 1 } }, // Cập nhật mật khẩu
+      { $set: { password: hashedPassword, status: 1, is_verified: true  } }, // Cập nhật mật khẩu
     );
 
     if (updateResult.modifiedCount > 0) {
