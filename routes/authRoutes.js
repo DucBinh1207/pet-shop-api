@@ -119,7 +119,7 @@ router.post("/forgot-password", async (req, res) => {
     }
 
     // Generate reset token
-    const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "1h" });
 
     // Store the token in MongoDB with the user
     await usersCollection.updateOne(
