@@ -3,6 +3,8 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const redis = require("redis");
+
 const {
   loginUser,
   registerUser,
@@ -17,9 +19,16 @@ const {
 } = require("../status_constant/users_status");
 const { client } = require("../db");
 const nodemailer = require("nodemailer");
+const { authenticateToken } = require("../middleware/authenticateToken");
+const clientRedis = redis.createClient();
+
+clientRedis.on("error", (err) => {
+  console.error("Error connecting to Redis:", err);
+});
 
 const SECRET_KEY =
   "0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1";
+
 //Đăng nhập
 router.post("/login", async (req, res) => {
   const { email, password, isRememberMe } = req.body; // Add isRememberMe to the request body
@@ -51,6 +60,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
 //Đăng ký
 router.post("/register", async (req, res) => {
   const { email, id_role } = req.body;
@@ -64,10 +74,29 @@ router.post("/register", async (req, res) => {
       res.status(401).json({ message: result.message });
     }
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+//Đăng xuất
+router.post("/logout", authenticateToken, async (req, res) => {
+  try {
+    const token = req.token;
+    const expirationTime = jwt.decode(token).exp;
+    const currentTime = Math.floor(Date.now() / 1000);
+    const remainingTime = expirationTime - currentTime;
+
+    clientRedis.setEx(token, remainingTime, "blacklisted", (err) => {
+      if (err) {
+        return res.status(500).json();
+      }
+      res.status(200).json();
+    });
+  } catch (err) {
+    res.status(500).json();
+  }
+});
+
 //Xác thực token từ web
 router.post("/verify-token", async (req, res) => {
   const { token } = req.body; // Use query parameter or request body for token
@@ -104,6 +133,7 @@ router.post("/verify-token", async (req, res) => {
     }
   }
 });
+
 //Quên mật khẩu
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
@@ -119,7 +149,9 @@ router.post("/forgot-password", async (req, res) => {
     }
 
     // Generate reset token
-    const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user._id }, SECRET_KEY, {
+      expiresIn: "1h",
+    });
 
     // Store the token in MongoDB with the user
     await usersCollection.updateOne(
@@ -153,12 +185,15 @@ router.post("/forgot-password", async (req, res) => {
     await client.close();
   }
 });
+
 //Đặt mật khẩu khi vừa mới đăng ký
-router.put('/change-password', async (req, res) => {
+router.put("/change-password", async (req, res) => {
   const { token, password } = req.body; // Lấy token và password từ body
 
   if (!token) {
-    return res.status(401).json({ message: "Token không hợp lệ hoặc không có." });
+    return res
+      .status(401)
+      .json({ message: "Token không hợp lệ hoặc không có." });
   }
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
@@ -170,7 +205,7 @@ router.put('/change-password', async (req, res) => {
 
     await client.connect();
     const db = client.db("PBL6"); // Kết nối tới database "PBL6"
-    const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
+    const usersCollection = db.collection("users"); // Truy cập vào collection 'users'
 
     // Tìm người dùng theo _id từ MongoDB
     console.log("userId (from token):", userId); // Log ra giá trị userId
@@ -183,27 +218,27 @@ router.put('/change-password', async (req, res) => {
     // Kiểm tra mật khẩu cũ
 
     if (await bcrypt.compare(password, user.password)) {
-      return res.status(400).jsonp({ message: "Mật khẩu mới không được trùng với mật khẩu hiện tại" });
+      return res.status(400).jsonp({
+        message: "Mật khẩu mới không được trùng với mật khẩu hiện tại",
+      });
     }
     // Cập nhật mật khẩu mới
     const updateResult = await usersCollection.updateOne(
-      { _id: userId },  // Tìm người dùng theo _id
-      { $set: { password: hashedPassword, status: 1, is_verified: true  } }, // Cập nhật mật khẩu
+      { _id: userId }, // Tìm người dùng theo _id
+      { $set: { password: hashedPassword, status: 1, is_verified: true } } // Cập nhật mật khẩu
     );
 
     if (updateResult.modifiedCount > 0) {
       res.status(200).jsonp({ message: "Cập nhật mật khẩu thành công" });
     } else {
-      res.status(500).jsonp({ message: "Đã có lỗi xảy ra trong quá trình thay đổi mật khẩu" });
+      res.status(500).jsonp({
+        message: "Đã có lỗi xảy ra trong quá trình thay đổi mật khẩu",
+      });
     }
   } catch (error) {
-    console.error('Error changing password:', error); // In ra lỗi nếu có
+    console.error("Error changing password:", error); // In ra lỗi nếu có
     res.status(500).jsonp({ message: "Lỗi máy chủ", error });
   }
-});
-// Route Hello World
-router.get("/test", (req, res) => {
-  res.json({ message: "Hello, World!" });
 });
 
 module.exports = router;
