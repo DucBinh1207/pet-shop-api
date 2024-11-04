@@ -11,6 +11,7 @@ router.get('/products/pets', async (req, res) => {
 
     // Query parameters
     const category = req.query.category || 'all'; // Default to 'all'
+    const breeds = req.query.breeds ? req.query.breeds.split(',') : []; 
     const sortBy = req.query.sortBy || 'default';
     const minPrice = parseFloat(req.query.minPrice) || 0;
     const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
@@ -18,9 +19,24 @@ router.get('/products/pets', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
     // Match category
-    let categoryFilter = {};
+    // let categoryFilter = {};
+    // if (category !== 'all') {
+    //   categoryFilter = { 'pets.type': category };
+    // }
+    
+    // Filters
+    let filters = {
+      'pets.price': { $gte: minPrice, $lte: maxPrice },
+    };
+
+    // Add category filter if provided
     if (category !== 'all') {
-      categoryFilter = { 'pets.type': category };
+      filters['pets.type'] = { $regex: new RegExp(category, 'i') };
+    }
+
+    // Add breed filter if provided
+    if (breeds.length > 0) {
+      filters['pets.breed'] = { $in: breeds.map(breed => new RegExp(breed, 'i')) };
     }
 
     // Aggregation pipeline
@@ -46,10 +62,11 @@ router.get('/products/pets', async (req, res) => {
       // },
       {
         // Step 3: Filter based on category and price
-        $match: {
-          ...categoryFilter,
-          'pets.price': { $gte: minPrice, $lte: maxPrice },
-        },
+        // $match: {
+        //   ...categoryFilter,
+        //   'pets.price': { $gte: minPrice, $lte: maxPrice },
+        // },
+        $match: filters,
       },
       {
         // Step 3: Group by product, collecting all variations into an array
@@ -63,7 +80,7 @@ router.get('/products/pets', async (req, res) => {
           rating: { $first: '$rating' },
           category: { $first: '$category' },
           variations_pets: { $push: '$pets' },
-          min_price: { $min: '$pest.price' }
+          min_price: { $min: '$pets.price' }
         }
       },
       {
