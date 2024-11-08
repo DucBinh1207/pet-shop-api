@@ -3,17 +3,32 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { loginUser, registerUser, verifyEmail, generateTokens } = require("../auth/auth");
+const redisClient = require("../middleware/redisClient");
+require("dotenv").config();
+
+const redis = redisClient.init();
+
+const {
+  loginUser,
+  registerUser,
+  verifyEmail,
+  generateToken,
+} = require("../auth/auth");
 // const { sql, poolPromise } = require("../db");
 const router = express.Router();
-const { USER_STATUS, USER_VERIFICATION } = require('../status_constant/users_status');
-const { client } = require('../db')
-const nodemailer = require('nodemailer');
+const {
+  USER_STATUS,
+  USER_VERIFICATION,
+} = require("../status_constant/users_status");
 
-const SECRET_KEY =
-  "0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1";
+const { client } = require("../db");
+const nodemailer = require("nodemailer");
+const { authenticateToken } = require("../middleware/authenticateToken");
 
-router.post('/login', async (req, res) => {
+const SECRET_KEY = process.env.SECRET_KEY;
+
+//Đăng nhập
+router.post("/login", async (req, res) => {
   const { email, password, isRememberMe } = req.body; // Add isRememberMe to the request body
 
   try {
@@ -24,17 +39,9 @@ router.post('/login', async (req, res) => {
       const user = result.user;
 
       // Generate access and refresh tokens
-      const { accessToken, refreshToken } = generateTokens(user._id, isRememberMe);
+      const accessToken = generateToken(user._id, isRememberMe);
 
-      // Set refresh token as an HTTP-only cookie
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
-        sameSite: 'Strict', // Prevent CSRF attacks
-        maxAge: isRememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 24 * 60 * 60 * 1000, // 30d or 2d in milliseconds
-      });
-
-      // Send response with access token and user data
+      // Trả về phản hồi với access token và thông tin người dùng
       res.status(200).json({
         token: accessToken,
         email: user.email,
@@ -48,10 +55,11 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     // Status 500 for internal server errors
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
+//Đăng ký
 router.post("/register", async (req, res) => {
   const { email, id_role } = req.body;
 
@@ -59,280 +67,291 @@ router.post("/register", async (req, res) => {
     const result = await registerUser(email, id_role);
 
     if (result.success) {
-      res.status(201).json({ message: result.message });
+      res.status(200).json({ message: result.message });
     } else {
       res.status(401).json({ message: result.message });
     }
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
-// router.get("/verify-email", async (req, res) => {
-//   const token = req.query.token;
-
-//   try {
-//     const result = await verifyEmail(token);
-//     const decoded = jwt.verify(token, SECRET_KEY);
-//     if (result.success) {
-//       res.redirect(`/create-new-password?email=${decoded.email}`);
-
-//       res.status(201).json({ message: result.message });
-//     } else {
-//       res.status(401).json({ message: result.message });
-//     }
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// });
-
-router.get("/verify-email", async (req, res) => {
-  const token = req.query.token;
-
+//Đăng xuất
+router.post("/logout", authenticateToken, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, SECRET_KEY);  // Verify token
-    const { userId, email } = decoded;
+    const token = req.token;
+    if (token) {
+      const decoded = jwt.verify(token, SECRET_KEY);
+      const expirationTime = decoded.exp;
+      const currentTime = Math.floor(Date.now() / 1000);
+      const remainingTime = expirationTime - currentTime;
 
-    await client.connect();
-    const database = client.db("PBL6");
-    const usersCollection = database.collection("users");
+      const userToken = process.env.PREFIX_AUTH_TOKEN + decoded.userId;
 
-    // Find the user by ID and email
-    const user = await usersCollection.findOne({ _id: userId, email: email });
-
-    if (!user || user.is_verified) {
-      return res.status(400).json({ message: 'Invalid or expired token.' });
+      if (await redis.exists(userToken)) {
+        return res.status(401).json({
+          success: false,
+          message: "Token has expired. Please request a new token.",
+        });
+      } else {
+        await redis.set(userToken, token, {
+          EX: remainingTime,
+        });
+        res.status(200).json();
+      }
     }
-
-    // Update the user as verified
-    await usersCollection.updateOne({ _id: userId }, { $set: { is_verified: true, status: USER_STATUS.ACTIVE } });
-
-    // Generate a token for setting the password
-    const passwordToken = jwt.sign({ userId }, SECRET_KEY, { expiresIn: '1h' });
-
-    res.status(200).json({ token: passwordToken, message: "Email verified! You can now set your password." });
-
-    // Optionally, you can redirect the user to a password-setting page:
-    // res.redirect(`/set-password?userId=${userId}`);
   } catch (err) {
-    console.error(err);
-    res.status(400).json({ message: "Invalid or expired token." });
-  } finally {
-    await client.close();
+    res.status(500).json();
   }
 });
 
-// router.post("/verify-token", async (req, res) => {
-//   const token = req.query.token;
-
-//   try {
-//     // const result = await verifyEmail(token);
-//     const decoded = jwt.verify(token, SECRET_KEY);
-
-//     // if (result.success) {
-//     //   // Redirect to reset password page with email
-//     //   // res.redirect(`/api/auth/reset-password?token=${token}`);
-//     //   res.status(201).json({ message: result.message });
-//     // } else {
-//     //   res.status(401).json({ message: result.message });
-//     // }
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// });
-
+//Xác thực token từ web
 router.post("/verify-token", async (req, res) => {
-  const token = req.query.token; // Use query parameter or request body for token
+  const { token } = req.body; // Use query parameter or request body for token
 
   try {
     // Verify the token using JWT
     const decoded = jwt.verify(token, SECRET_KEY);
 
-    // If the token is valid, return success along with decoded data (like user ID or email)
-    res.status(200).json({
-      success: true,
-      message: "Token is valid.",
-      userId: decoded.userId,  // Assuming the token contains userId
-      email: decoded.email     // Assuming the token contains email
-    });
+    const userToken = process.env.PREFIX_VERIFY_TOKEN + decoded.userId;
+    console.log(userToken);
+
+    if (token === (await redis.get(userToken))) {
+      res.status(200).json();
+    } else {
+      return res.status(401).json({
+        message: "Token has expired. Please request a new token.",
+      });
+    }
   } catch (err) {
     // Handle different types of JWT errors
-    if (err.name === 'TokenExpiredError') {
+    if (err.name === "TokenExpiredError") {
       return res.status(401).json({
-        success: false,
-        message: "Token has expired. Please request a new token."
+        message: "Token has expired. Please request a new token.",
       });
-    } else if (err.name === 'JsonWebTokenError') {
+    } else if (err.name === "JsonWebTokenError") {
       return res.status(401).json({
-        success: false,
-        message: "Invalid token."
+        message: "Invalid token.",
       });
     } else {
       console.error(err);
       return res.status(500).json({
-        success: false,
-        message: "Internal server error."
+        message: "Internal server error.",
       });
     }
   }
 });
 
-// router.post("/reset-password", async (req, res) => {
-//   const { newPassword } = req.body;
-//   const token = req.query.token;
-
-//   try {
-//     const decoded = jwt.verify(token, SECRET_KEY);
-
-//     const saltRounds = 10;
-//     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-//     await client.connect();
-//     const database = client.db("PBL6");
-//     const usersCollection = database.collection("users");
-
-//     // Update password in MongoDB
-//     const updateResult = await usersCollection.updateOne(
-//       { _id: decoded.userId },
-//       { $set: { password: hashedPassword, status: USER_STATUS.ACTIVE, is_verified: USER_VERIFICATION.VERIFIED } } // Update status to active
-//     );
-
-//     if (updateResult.modifiedCount === 1) {
-//       res.status(200).json({ success: true, message: "Password reset successfully!" });
-//     } else {
-//       res.status(404).json({ success: false, message: "User not found." });
-//     }
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Error resetting password." });
-//   } finally {
-//     await client.close();
-//   }
-// });
-
-router.post("/set-password", async (req, res) => {
-  const authHeader = req.headers.authorization;  // Get the Authorization header
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authorization token missing or invalid.' });
-  }
-
-  const token = authHeader.split(' ')[1];  // Extract the token from 'Bearer <token>'
-  const { newPassword } = req.body;
+//Quên mật khẩu
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
 
   try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    const userId = decoded.userId;
-
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
     await client.connect();
     const database = client.db("PBL6");
     const usersCollection = database.collection("users");
 
+    const user = await usersCollection.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Generate reset token
+    const token = jwt.sign({ userId: user._id }, SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    // Store the token in MongoDB with the user
     await usersCollection.updateOne(
-      { _id: userId },
-      { $set: { password: hashedPassword, status: USER_STATUS.ACTIVE } }
+      { _id: user._id },
+      { $set: { resetToken: token } }
     );
 
-    res.status(200).json({ message: "Password set successfully!" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error setting password." });
+    // Send reset password email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "khongquen012@gmail.com",
+        pass: "zoijiuykwjnueeju",
+      },
+    });
+
+    const resetLink = `${process.env.END_USER_URL}/reset-password?token=${token}`;
+
+    const mailOptions = {
+      from: "khongquen012@gmail.com",
+      to: email,
+      subject: "Xác nhận đổi mật khẩu tài khoản Whiskers",
+      html: `<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              background-color: #f8f9fa;
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              width: 100%;
+              max-width: 600px;
+              margin: 20px auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+              font-size: 24px;
+              color: #531492;
+              text-align: center;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 10px;
+              margin-bottom: 30px; /* Thêm margin dưới */
+            }
+            h1 img {
+              width: 40px;
+              height: 40px;
+            }
+            h1 span {
+              font-size: 40px;
+              line-height: 40px;
+              font-weight: bold;
+              color: #531492;
+            }
+            p {
+              font-size: 16px;
+              line-height: 1.5;
+              text-align: left;
+              margin-bottom: 20px; /* Thêm margin dưới */
+            }
+            .btn {
+              display: inline-block;
+              padding: 12px 40px;
+              background-color: #531492;
+              color: #ffffff;
+              text-align: center;
+              text-decoration: none;
+              border-radius: 10px;
+              font-size: 16px;
+              font-weight: bold;
+              cursor: pointer;
+              margin: 20px 0px 20px 0px;
+            }
+            .footer {
+              text-align: left;
+              font-size: 14px;
+              color: #777;
+              margin-top: 20px;
+            }
+            .footer a {
+              color: #007bff;
+              text-decoration: none;
+            }
+            .btn-container {
+              text-align: center;
+              margin-top: 20px; /* Thêm margin trên cho container nút */
+            }
+          </style>
+        </head>
+        <body>
+
+           <div class="container">
+            <h1>
+              <a href="${process.env.END_USER_URL}" target="_blank" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <img src="https://i.imgur.com/riVShrz.png" alt="Whiskers Logo" style="width: 40px; height: 40px;">
+                <span>Whiskers</span>
+              </a>
+            </h1>
+
+            <p>Chào mừng bạn đến với Whiskers! Để hoàn tất quá trình đổi mật khẩu, vui lòng nhấn vào nút dưới đây.</p>
+
+            <!-- Căn giữa nút -->
+            <div class="btn-container">
+              <a href="${resetLink}" target="_blank" class="btn">Đổi mật khẩu</a>
+            </div>
+
+            <p class="footer">
+              Nếu bạn gặp vấn đề với nút trên, bạn cũng có thể sao chép và dán liên kết dưới đây:
+            </p>
+            <p class="footer">
+              <a href="${resetLink}" target="_blank">${resetLink}</a>
+            </p>
+          </div>
+
+        </body>
+      </html>`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "Reset password link sent to your email" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
   } finally {
     await client.close();
   }
 });
 
-router.post('/request-password-reset', async (req, res) => {
-  const { email } = req.body;
+//Đặt mật khẩu khi vừa mới đăng ký
+router.put("/change-password", async (req, res) => {
+  const { token, password } = req.body; // Lấy token và password từ body
 
+  if (!token) {
+    return res
+      .status(401)
+      .json({ message: "Token không hợp lệ hoặc không có." });
+  }
   try {
-      await client.connect();
-      const database = client.db('PBL6');
-      const usersCollection = database.collection('users');
-      
-      const user = await usersCollection.findOne({ email });
-      if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-      }
+    const decoded = jwt.verify(token, SECRET_KEY);
+    const userId = decoded.userId;
 
-      // Generate reset token
-      const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '1h' });
+    const saltRounds = 10;
+    const salt = await bcrypt.genSalt(saltRounds);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-      // Store the token in MongoDB with the user
-      await usersCollection.updateOne(
-          { _id: user._id },
-          { $set: { resetToken: token } }
-      );
-      
-      // Send reset password email
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: 'khongquen012@gmail.com',
-          pass: 'zoijiuykwjnueeju'
-        }
+    await client.connect();
+    const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+    const usersCollection = db.collection("users"); // Truy cập vào collection 'users'
+
+    // Tìm người dùng theo _id từ MongoDB
+    console.log("userId (from token):", userId); // Log ra giá trị userId
+    const user = await usersCollection.findOne({ _id: userId });
+
+    if (!user) {
+      return res.status(404).jsonp({ message: "Người dùng không tồn tại" });
+    }
+
+    // Kiểm tra mật khẩu cũ
+
+    if (await bcrypt.compare(password, user.password)) {
+      return res.status(400).jsonp({
+        message: "Mật khẩu mới không được trùng với mật khẩu hiện tại",
       });
-      
-      const resetLink = `http://localhost:8000/api/auth/reset-password?token=${token}`;
-      
-      const mailOptions = {
-        from: 'khongquen012@gmail.com',
-        to: email,
-        subject: 'Password Reset Request',
-        text: `Click the link to reset your password: ${resetLink}`,
-      };
-      
-      await transporter.sendMail(mailOptions);
-      res.status(200).json({ message: 'Reset password link sent to your email' });
+    }
+    // Cập nhật mật khẩu mới
+    const updateResult = await usersCollection.updateOne(
+      { _id: userId }, // Tìm người dùng theo _id
+      { $set: { password: hashedPassword, status: 1, is_verified: true } } // Cập nhật mật khẩu
+    );
+
+    if (updateResult.modifiedCount > 0) {
+      const userToken = process.env.PREFIX_VERIFY_TOKEN + decoded.userId;
+      await redis.del(userToken);
+      res.status(200).jsonp({ message: "Cập nhật mật khẩu thành công" });
+    } else {
+      res.status(500).jsonp({
+        message: "Đã có lỗi xảy ra trong quá trình thay đổi mật khẩu",
+      });
+    }
   } catch (error) {
-      res.status(500).json({ message: 'Server error', error });
-  } finally {
-      await client.close();
+    console.error("Error changing password:", error); // In ra lỗi nếu có
+    res.status(500).jsonp({ message: "Lỗi máy chủ", error });
   }
-});
-
-router.post('/reset-password', async (req, res) => {
-  const { token } = req.query;
-  const { password } = req.body;
-
-  try {
-      const decoded = jwt.verify(token, SECRET_KEY);
-
-      await client.connect();
-      const database = client.db('PBL6');
-      const usersCollection = database.collection('users');
-      
-      const user = await usersCollection.findOne({ _id: decoded.id, resetToken: token });
-      if (!user) {
-          return res.status(400).json({ message: 'Invalid or expired token' });
-      }
-
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Update user's password and clear resetToken
-      await usersCollection.updateOne(
-          { _id: user._id },
-          { $set: { password: hashedPassword }, $unset: { resetToken: "" } }
-      );
-
-      res.status(200).json({ message: 'Password successfully reset' });
-  } catch (error) {
-      res.status(400).json({ message: 'Error resetting password', error });
-  } finally {
-      await client.close();
-  }
-});
-
-// Route Hello World
-router.get("/test", (req, res) => {
-  res.json({ message: "Hello, World!" });
 });
 
 module.exports = router;
