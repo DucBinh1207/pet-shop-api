@@ -36,7 +36,7 @@ const authenticateToken = (req, res, next) => {
 // Route để thêm sản phẩm vào giỏ hàng
 router.post('/cartItem/add', authenticateToken, async (req, res) => {
     const { id_product_variant, category, quantity } = req.body;
-    const userId = req.user.id;  // Lấy id_user từ token sau khi xác thực
+    const userId = req.user.userId;  // Lấy id_user từ token sau khi xác thực
 
     try {
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
@@ -84,7 +84,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
 });
 // Route load sản phẩm giỏ hàng của 1 user
 router.get("/cartItems", authenticateToken, async (req, res) => {
-    const userId = req.user.id; // Lấy id_user từ token
+    const userId = req.user.userId; // Lấy id_user từ token
 
     try {
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
@@ -158,7 +158,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
 });
 // Route để cập nhật giỏ hàng
 router.post('/cartItems/update', authenticateToken, async (req, res) => {
-    const userId = req.user.id; // Lấy id_user từ token
+    const userId = req.user.userId; // Lấy id_user từ token
     const cartItems = req.body; // Nhận danh sách cart items cần cập nhật
     console.log(req.body);
 
