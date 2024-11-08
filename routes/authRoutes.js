@@ -3,7 +3,10 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const redis = require("redis");
+const redisClient = require("../middleware/redisClient");
+require("dotenv").config();
+
+const redis = redisClient.init();
 
 const {
   loginUser,
@@ -17,17 +20,12 @@ const {
   USER_STATUS,
   USER_VERIFICATION,
 } = require("../status_constant/users_status");
+
 const { client } = require("../db");
 const nodemailer = require("nodemailer");
 const { authenticateToken } = require("../middleware/authenticateToken");
-const clientRedis = redis.createClient();
 
-clientRedis.on("error", (err) => {
-  console.error("Error connecting to Redis:", err);
-});
-
-const SECRET_KEY =
-  "0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1";
+const SECRET_KEY = process.env.SECRET_KEY;
 
 //Đăng nhập
 router.post("/login", async (req, res) => {
@@ -82,16 +80,26 @@ router.post("/register", async (req, res) => {
 router.post("/logout", authenticateToken, async (req, res) => {
   try {
     const token = req.token;
-    const expirationTime = jwt.decode(token).exp;
-    const currentTime = Math.floor(Date.now() / 1000);
-    const remainingTime = expirationTime - currentTime;
+    if (token) {
+      const decoded = jwt.verify(token, SECRET_KEY);
+      const expirationTime = decoded.exp;
+      const currentTime = Math.floor(Date.now() / 1000);
+      const remainingTime = expirationTime - currentTime;
 
-    clientRedis.setEx(token, remainingTime, "blacklisted", (err) => {
-      if (err) {
-        return res.status(500).json();
+      const userToken = process.env.PREFIX_AUTH_TOKEN + decoded.userId;
+
+      if (await redis.exists(userToken)) {
+        return res.status(401).json({
+          success: false,
+          message: "Token has expired. Please request a new token.",
+        });
+      } else {
+        await redis.set(userToken, token, {
+          EX: remainingTime,
+        });
+        res.status(200).json();
       }
-      res.status(200).json();
-    });
+    }
   } catch (err) {
     res.status(500).json();
   }
@@ -105,29 +113,29 @@ router.post("/verify-token", async (req, res) => {
     // Verify the token using JWT
     const decoded = jwt.verify(token, SECRET_KEY);
 
-    // If the token is valid, return success along with decoded data (like user ID or email)
-    res.status(200).json({
-      success: true,
-      message: "Token is valid.",
-      userId: decoded.userId, // Assuming the token contains userId
-      email: decoded.email, // Assuming the token contains email
-    });
+    const userToken = process.env.PREFIX_VERIFY_TOKEN + decoded.userId;
+    console.log(userToken);
+
+    if (token === (await redis.get(userToken))) {
+      res.status(200).json();
+    } else {
+      return res.status(401).json({
+        message: "Token has expired. Please request a new token.",
+      });
+    }
   } catch (err) {
     // Handle different types of JWT errors
     if (err.name === "TokenExpiredError") {
       return res.status(401).json({
-        success: false,
         message: "Token has expired. Please request a new token.",
       });
     } else if (err.name === "JsonWebTokenError") {
       return res.status(401).json({
-        success: false,
         message: "Invalid token.",
       });
     } else {
       console.error(err);
       return res.status(500).json({
-        success: false,
         message: "Internal server error.",
       });
     }
@@ -168,13 +176,116 @@ router.post("/forgot-password", async (req, res) => {
       },
     });
 
-    const resetLink = `http://localhost:8000/api/auth/reset-password?token=${token}`;
+    const resetLink = `${process.env.END_USER_URL}/reset-password?token=${token}`;
 
     const mailOptions = {
       from: "khongquen012@gmail.com",
       to: email,
-      subject: "Password Reset Request",
-      text: `Click the link to reset your password: ${resetLink}`,
+      subject: "Xác nhận đổi mật khẩu tài khoản Whiskers",
+      html: `<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              background-color: #f8f9fa;
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              width: 100%;
+              max-width: 600px;
+              margin: 20px auto;
+              background-color: #ffffff;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+              font-size: 24px;
+              color: #531492;
+              text-align: center;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 10px;
+              margin-bottom: 30px; /* Thêm margin dưới */
+            }
+            h1 img {
+              width: 40px;
+              height: 40px;
+            }
+            h1 span {
+              font-size: 40px;
+              line-height: 40px;
+              font-weight: bold;
+              color: #531492;
+            }
+            p {
+              font-size: 16px;
+              line-height: 1.5;
+              text-align: left;
+              margin-bottom: 20px; /* Thêm margin dưới */
+            }
+            .btn {
+              display: inline-block;
+              padding: 12px 40px;
+              background-color: #531492;
+              color: #ffffff;
+              text-align: center;
+              text-decoration: none;
+              border-radius: 10px;
+              font-size: 16px;
+              font-weight: bold;
+              cursor: pointer;
+              margin: 20px 0px 20px 0px;
+            }
+            .footer {
+              text-align: left;
+              font-size: 14px;
+              color: #777;
+              margin-top: 20px;
+            }
+            .footer a {
+              color: #007bff;
+              text-decoration: none;
+            }
+            .btn-container {
+              text-align: center;
+              margin-top: 20px; /* Thêm margin trên cho container nút */
+            }
+          </style>
+        </head>
+        <body>
+
+           <div class="container">
+            <h1>
+              <a href="${process.env.END_USER_URL}" target="_blank" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <img src="https://i.imgur.com/riVShrz.png" alt="Whiskers Logo" style="width: 40px; height: 40px;">
+                <span>Whiskers</span>
+              </a>
+            </h1>
+
+            <p>Chào mừng bạn đến với Whiskers! Để hoàn tất quá trình đổi mật khẩu, vui lòng nhấn vào nút dưới đây.</p>
+
+            <!-- Căn giữa nút -->
+            <div class="btn-container">
+              <a href="${resetLink}" target="_blank" class="btn">Đổi mật khẩu</a>
+            </div>
+
+            <p class="footer">
+              Nếu bạn gặp vấn đề với nút trên, bạn cũng có thể sao chép và dán liên kết dưới đây:
+            </p>
+            <p class="footer">
+              <a href="${resetLink}" target="_blank">${resetLink}</a>
+            </p>
+          </div>
+
+        </body>
+      </html>`,
     };
 
     await transporter.sendMail(mailOptions);
@@ -229,6 +340,8 @@ router.put("/change-password", async (req, res) => {
     );
 
     if (updateResult.modifiedCount > 0) {
+      const userToken = process.env.PREFIX_VERIFY_TOKEN + decoded.userId;
+      await redis.del(userToken);
       res.status(200).jsonp({ message: "Cập nhật mật khẩu thành công" });
     } else {
       res.status(500).jsonp({
