@@ -303,6 +303,7 @@ router.get('/orders/user/items', authenticateToken, async (req, res) => {
         return res.status(500).json({ message: 'Lỗi server khi lấy sản phẩm cho đơn hàng' });
     }
 });
+//Lấy 2 thông tin cùng một lúc
 router.get('/orders/user/details', authenticateToken, async (req, res) => {
     const id_order = req.query.id_order; // Lấy id_order từ query parameters
 
