@@ -36,14 +36,11 @@ const authenticateToken = (req, res, next) => {
 // Route để thêm sản phẩm vào giỏ hàng
 router.post('/cartItem/add', authenticateToken, async (req, res) => {
     const { id_product_variant, category, quantity } = req.body;
-    const userId = req.user.id;  // Lấy id_user từ token sau khi xác thực
-
+    const userId = req.user.userId;  // Lấy id_user từ token sau khi xác thực
+    console.log(req.body);
     try {
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
-
-        // Chuyển đổi userId từ token sang ObjectId
-        const objectId = new ObjectId(userId);
 
         // Kiểm tra xem đã có sản phẩm với cùng 3 tham số (userId, id_product_variant, category) trong giỏ hàng hay chưa
         const existingItem = await cartCollection.findOne({
@@ -61,7 +58,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
                 { $set: { quantity: updatedQuantity } }
             );
 
-            res.status(200).json({ message: 'Cập nhật giỏ hàng thành công!' });
+            res.status(200).json();
         } else {
             // Nếu không có sản phẩm trong giỏ hàng, thêm mới
             const newItem = {
@@ -75,7 +72,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
 
             await cartCollection.insertOne(newItem); // Thêm sản phẩm mới vào giỏ hàng
 
-            res.status(201).json({ message: 'Thêm vào giỏ hàng thành công!' });
+            res.status(201).json();
         }
     } catch (error) {
         console.error('Error adding item to cart:', error); // In ra lỗi nếu có
@@ -84,7 +81,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
 });
 // Route load sản phẩm giỏ hàng của 1 user
 router.get("/cartItems", authenticateToken, async (req, res) => {
-    const userId = req.user.id; // Lấy id_user từ token
+    const userId = req.user.userId; // Lấy id_user từ token
 
     try {
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
@@ -158,7 +155,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
 });
 // Route để cập nhật giỏ hàng
 router.post('/cartItems/update', authenticateToken, async (req, res) => {
-    const userId = req.user.id; // Lấy id_user từ token
+    const userId = req.user.userId; // Lấy id_user từ token
     const cartItems = req.body; // Nhận danh sách cart items cần cập nhật
     console.log(req.body);
 
@@ -213,6 +210,14 @@ router.post('/cartItems/update', authenticateToken, async (req, res) => {
         console.error('Error updating cart items:', error); // In ra lỗi nếu có
         res.status(500).json({ message: 'Lỗi máy chủ', error });
     }
+});
+// Route test đơn giản để kiểm tra nhận dữ liệu từ client
+router.post('/test', (req, res) => {
+    console.log("Request body:", req.body);
+    res.json({
+        message: "Test route received data",
+        body: req.body,
+    });
 });
 
 module.exports = router;
