@@ -50,7 +50,7 @@ router.post("/payment", authenticateToken , async (req, res) => {
         amount: amount, // Số tiền được nhận từ yêu cầu
         description: `Pet Shop - Payment for order #${id_order}`, // Mô tả đơn hàng với id_order
         bank_code: "",
-        callback_url: "https://47d4-171-251-17-143.ngrok-free.app/api/callback",
+        callback_url: "https://2e8d-171-251-17-143.ngrok-free.app/api/callback",
     };
 
     const data =
@@ -104,8 +104,6 @@ router.post("/callback", async (req, res) => {
         const parsedData = JSON.parse(embed_data);
         // Access id_order
         const id_order = parsedData.id_order;
-        console.log(id_order);
-        console.log({ app_id });
 
 
         result = { return_code: 1, return_message: "Success" };
@@ -131,12 +129,13 @@ async function updatePaymentStatus(app_trans_id) {
             throw new Error("Payment record not found or already updated");
         }
         // Lấy `id_order` của bản ghi vừa cập nhật trong `payments`
-        const paymentRecord = await paymentsCollection.findOne({ app_trans_id: app_trans_id });
+        const paymentRecord = await paymentsCollection.findOne({ trans_id: app_trans_id });
         const id_order = paymentRecord?.id_order;
+        console.log({id_order});
         // Tìm và cập nhật trạng thái của bản ghi tương ứng trong `orders`
         const ordersCollection = db.collection("orders");
         const orderResult = await ordersCollection.updateOne(
-            { id_order: id_order },
+            { _id: id_order },
             { $set: { status: 6 } }
         );
 
@@ -158,7 +157,7 @@ async function saveTransID(app_trans_id, id_order) {
         // Tìm và cập nhật bản ghi có id_order
         const result = await paymentsCollection.updateOne(
             { id_order: id_order },  // Điều kiện tìm kiếm
-            { $set: { app_trans_id: app_trans_id } }  // Trường cần cập nhật
+            { $set: { trans_id: app_trans_id } }  // Trường cần cập nhật
         );
     } catch (error) {
         console.error("Lỗi khi cập nhật app_trans_id:", error);
