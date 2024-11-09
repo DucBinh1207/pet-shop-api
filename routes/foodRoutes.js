@@ -126,7 +126,7 @@ router.get('/products/foods', async (req, res) => {
 
     // Query parameters
     const ingredient = req.query.ingredient?.toLowerCase() || 'all'; // Default to 'all'
-    const petType = req.query.pet_type?.toLowerCase() || 'all';
+    const categories = req.query.category ? req.query.category.split(',').map(c => c.toLowerCase()) : []; 
     const weight = parseInt(req.query.weight) || null;
     const sortBy = req.query.sortBy || 'default';
     const minPrice = parseFloat(req.query.minPrice) || 0;
@@ -144,9 +144,9 @@ router.get('/products/foods', async (req, res) => {
       filters['foods.ingredient'] = { $regex: new RegExp(ingredient, 'i') };
     }
 
-    // Add pet_type filter if provided
-    if (petType !== 'all') {
-      filters['foods.pet_type'] = { $regex: new RegExp(petType, 'i') };
+    // Add category filter if multiple categories are provided
+    if (categories.length > 0) {
+      filters['foods.category'] = { $in: categories.map(c => new RegExp(`^${c}$`, 'i')) };
     }
 
     // Add weight filter if provided
