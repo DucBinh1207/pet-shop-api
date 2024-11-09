@@ -8,6 +8,10 @@ const cartRoutes = require("./routes/cartItemRoutesMongo");
 const orderRoutes = require("./routes/orderRoutesMongo");
 const detailRoutes = require('./routes/productsDetailRoutes');
 const commentRoutes = require('./routes/commentRoutes'); 
+const voucherRoutes = require("./routes/voucherRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+
+
 const cors = require("cors");
 
 const app = express();
@@ -73,6 +77,10 @@ app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
 app.use('/api', detailRoutes);
 app.use('/api/comment', commentRoutes);
+app.use("/api", voucherRoutes);
+app.use("/api", paymentRoutes);
+
+
 app.use(express.static("public"));
 
 // Middleware xử lý lỗi
