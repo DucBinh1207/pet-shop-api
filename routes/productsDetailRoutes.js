@@ -19,11 +19,13 @@ router.get('/products/supplies/:id', async (req, res) => {
         $match: { _id: productId },
       },
       {
-        // Step 2: Lookup supplies collection to combine with product
+        // Step 2: Lookup supplies collection to combine with product, with status = 1 condition
         $lookup: {
           from: 'supplies',
-          localField: '_id',
-          foreignField: 'id_product',
+          let: { product_id: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $and: [{ $eq: ['$id_product', '$$product_id'] }, { $eq: ['$status', 1] }] } } }
+          ],
           as: 'supplies',
         },
       },
@@ -38,12 +40,20 @@ router.get('/products/supplies/:id', async (req, res) => {
           name: { $first: '$name' },
           description: { $first: '$description' },
           image: { $first: '$image' },
-          status: { $first: '$status' },
           date_created: { $first: '$date_created' },
           rating: { $first: '$rating' },
           category: { $first: '$category' },
-          variations_supplies: { $push: '$supplies' },
-          min_price: { $min: '$supplies.price' },
+          material: { $first: '$supplies.material' }, // Add material
+          brand: { $first: '$supplies.brand' },       // Add brand
+          type: { $first: '$supplies.type' },         // Add type
+          variations_supplies: {
+            $push: {
+              id_variation: '$supplies._id',
+              color: '$supplies.color',
+              size: '$supplies.size',
+              price: '$supplies.price',
+            }, // Keep only the required fields
+          },
         },
       },
     ];
@@ -65,121 +75,137 @@ router.get('/products/supplies/:id', async (req, res) => {
 });
 
 router.get('/products/foods/:id', async (req, res) => {
-    try {
-      await client.connect();
-      const database = client.db('PBL6');
-      const productsCollection = database.collection('products');
-      const suppliesCollection = database.collection('foods');
-  
-      // Get the product id from the URL
-      const productId = req.params.id;
-  
-      // Aggregation pipeline
-      const pipeline = [
-        {
-          // Step 1: Match the product by id
-          $match: { _id: productId },
-        },
-        {
-          // Step 2: Lookup foods collection to combine with product
-          $lookup: {
-            from: 'foods',
-            localField: '_id',
-            foreignField: 'id_product',
-            as: 'foods',
-          },
-        },
-        {
-          // Step 3: Unwind foods array
-          $unwind: '$foods',
-        },
-        {
-          // Step 4: Group by product, collecting all variations into an array
-          $group: {
-            _id: '$_id',
-            name: { $first: '$name' },
-            description: { $first: '$description' },
-            image: { $first: '$image' },
-            status: { $first: '$status' },
-            date_created: { $first: '$date_created' },
-            rating: { $first: '$rating' },
-            category: { $first: '$category' },
-            variations_foods: { $push: '$foods' },
-            min_price: { $min: '$foods.price' },
-          },
-        },
-      ];
-  
-      // Execute the aggregation
-      const product = await productsCollection.aggregate(pipeline).toArray();
-  
-      if (product.length === 0) {
-        return res.status(404).json({ message: 'Product not found' });
-      }
-  
-      res.json(product[0]); // Return the single product
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Internal Server Error' });
-    } finally {
-      await client.close();
+  try {
+    const foodId = req.params.id; // Lấy ID từ tham số URL
+
+    // Kết nối tới MongoDB và lấy các collection
+    await client.connect();
+    const database = client.db('PBL6');
+    const foodsCollection = database.collection('foods');
+    const productsCollection = database.collection('products');
+
+    // Lấy thông tin food theo ID
+    const food = await foodsCollection.findOne({ id_product: foodId });
+
+    if (!food) {
+      return res.status(404).json({ message: "Food không tồn tại" });
     }
-  });
+
+    // Lấy thông tin sản phẩm tương ứng
+    const product = await productsCollection.findOne({ _id: food.id_product });
+
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    }
+
+    // Lấy tất cả variations của sản phẩm từ bảng food
+    const allVariations = await foodsCollection.find({ id_product: product._id }).toArray();
+
+    // Tạo mảng variations_food từ allVariations và xử lý ingredient và weight
+    const variationsFood = allVariations.map(variation => {
+      let ingredient = variation.ingredient;
+      if (ingredient === "Chicken") {
+        ingredient = "Gà";
+      } else if (ingredient === "Beef") {
+        ingredient = "Bò";
+      }
+
+      let weight = variation.weight;
+      return {
+        id_variation: variation._id,
+        ingredient: ingredient,
+        weight: weight,
+        price: variation.price,
+        quantity: variation.quantity
+      };
+    });
+
+    // Tạo đối tượng response
+    const responseData = {
+      id: product._id,
+      category: product.category,
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      status: product.status,
+      date_created: product.date_created,
+      rating: product.rating,
+      pet_type: food.pet_type,
+      nutrition_info: food.nutrition_info,
+      expire_date: food.expire_date,
+      brand: food.brand,
+      variations_food: variationsFood,
+    };
+
+    res.json(responseData); // Trả lại dữ liệu
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
 
 router.get('/products/pets/:id', async (req, res) => {
   try {
+    const petId = req.params.id; // Lấy ID từ tham số URL
+
+    // Kết nối tới MongoDB và lấy các collection
     await client.connect();
     const database = client.db('PBL6');
+    const petsCollection = database.collection('pets');
     const productsCollection = database.collection('products');
-    const suppliesCollection = database.collection('pets');
 
-    // Get the product id from the URL
-    const productId = req.params.id;
+    // Lấy thông tin pet theo ID
+    const pet = await petsCollection.findOne({ id_product: petId });
 
-    // Aggregation pipeline
-    const pipeline = [
-      {
-        // Step 1: Match the product by id
-        $match: { _id: productId },
-      },
-      {
-        // Step 2: Lookup pets collection to combine with product
-        $lookup: {
-          from: 'pets',
-          localField: '_id',
-          foreignField: 'id_product',
-          as: 'pets',
-        },
-      },
-      {
-        // Step 3: Unwind pets array
-        $unwind: '$pets',
-      },
-      {
-        // Step 4: Group by product, collecting all variations into an array
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          image: { $first: '$image' },
-          status: { $first: '$status' },
-          date_created: { $first: '$date_created' },
-          rating: { $first: '$rating' },
-          category: { $first: '$category' },
-          variations_pets: { $push: '$pets' },
-          min_price: { $min: '$pets.price' },
-        },
-      },
-    ];
-
-    // Execute the aggregation
-    const product = await productsCollection.aggregate(pipeline).toArray();
-
-    if (product.length === 0) {
-      return res.status(404).json({ message: 'Product not found' });
+    if (!pet) {
+      return res.status(404).json({ message: "Pet không tồn tại" });
     }
 
-    res.json(product[0]); // Return the single product
+    // Lấy thông tin sản phẩm tương ứng
+    const product = await productsCollection.findOne({ _id: pet.id_product });
+
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    }
+
+    // Lấy tất cả variations của sản phẩm từ bảng pets
+    const allVariations = await petsCollection.find({ 
+      id_product: product._id, 
+      status: 1 
+    }).toArray();
+
+    // Tạo mảng variations_pets từ allVariations
+    const variationsPets = allVariations.map(variation => ({
+      id_variation: variation._id,
+      price: variation.price,
+      gender: variation.gender,
+      health:variation.health,
+      father: variation.father,
+      mother: variation.mother,
+      type: variation.type,
+      deworming: variation.deworming,
+      vaccine: variation.vaccine,
+      breed: variation.breed,
+      breed_origin: variation.breed_origin,
+      trait: variation.trait,
+      date_of_birth: variation.date_of_birth,
+      quantity: variation.quantity,
+      date_created: variation.date_created,
+    }));
+
+    // Tạo đối tượng response
+    const responseData = {
+      id: product._id,
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      date_created: product.date_created,
+      rating: product.rating,
+      category: product.category,
+      variations_pet: variationsPets,
+    };
+
+    res.json(responseData); // Trả lại dữ liệu
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error' });

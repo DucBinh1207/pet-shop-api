@@ -6,8 +6,8 @@ const foodRoutes = require("./routes/foodRoutes");
 const supplyRoutes = require("./routes/supplyRoutes");
 const cartRoutes = require("./routes/cartItemRoutesMongo");
 const orderRoutes = require("./routes/orderRoutesMongo");
-const detailRoutes = require('./routes/productsDetailRoutes'); // Import module route
-const commentRoutes = require('./routes/commentRoutes'); // Import module route
+const detailRoutes = require('./routes/productsDetailRoutes');
+const commentRoutes = require('./routes/commentRoutes'); 
 const cors = require("cors");
 
 const app = express();
