@@ -15,7 +15,10 @@ router.get('/orders/user', authenticateToken, async (req, res) => {
         const ordersCollection = db.collection('orders'); // Truy cập vào collection 'orders'
 
         // Truy vấn các đơn hàng của user từ MongoDB
-        const orders = await ordersCollection.find({ id_user: id_user, status: { $ne: 0 } }).toArray();
+        const orders = await ordersCollection
+            .find({ id_user: id_user, status: { $ne: 0 } })
+            .sort({ date: -1 }) // Sắp xếp giảm dần theo createdAt (mới nhất lên đầu)
+            .toArray();
 
         if (orders.length === 0) {
             return res.status(404).json({ message: 'Không có đơn hàng nào' });
