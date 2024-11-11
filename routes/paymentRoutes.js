@@ -46,7 +46,7 @@ router.post("/payment", authenticateToken, async (req, res) => {
         amount: amount, // Số tiền được nhận từ yêu cầu
         description: `Pet Shop - Payment for order #${id_order}`, // Mô tả đơn hàng với id_order
         bank_code: "",
-        callback_url: "https://47d4-171-251-17-143.ngrok-free.app/api/callback",
+        callback_url: "https://29fe-171-251-17-143.ngrok-free.app/api/callback",
     };
 
     const data =
