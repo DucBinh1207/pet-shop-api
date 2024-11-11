@@ -4,17 +4,14 @@ const axios = require("axios").default;
 const CryptoJS = require("crypto-js");
 const moment = require("moment");
 const qs = require("qs");
-const { MongoClient, ObjectId, ServerApiVersion } = require('mongodb'); // Thêm ObjectId
 
 const router = express.Router();
-const SECRET_KEY = '0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1'; // Thay thế bằng secret key của bạn
 
 // MongoDB connection (nếu không cần tái sử dụng kết nối từ file chính)
 const { client } = require("../db");
 // Middleware để parse JSON body
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
-
 
 // APP INFO
 const config = {
@@ -23,9 +20,8 @@ const config = {
     key2: "kLtgPl8HHhfvMuDHPwKfgfsY4Ydm9eIz",
     endpoint: "https://sb-openapi.zalopay.vn/v2/create",
 };
-
 // Payment route
-router.post("/payment", authenticateToken , async (req, res) => {
+router.post("/payment", authenticateToken, async (req, res) => {
     const { id_order, amount } = req.body;
 
     const embed_data = {
@@ -50,7 +46,7 @@ router.post("/payment", authenticateToken , async (req, res) => {
         amount: amount, // Số tiền được nhận từ yêu cầu
         description: `Pet Shop - Payment for order #${id_order}`, // Mô tả đơn hàng với id_order
         bank_code: "",
-        callback_url: "https://1557-171-251-17-143.ngrok-free.app/api/callback",
+        callback_url: "https://47d4-171-251-17-143.ngrok-free.app/api/callback",
     };
 
     const data =
@@ -75,7 +71,7 @@ router.post("/payment", authenticateToken , async (req, res) => {
         });
         await saveTransID(transID_new, id_order);
 
-        return res.status(200).json(result.data);
+        return res.status(201).json(result.data);
     } catch (error) {
         console.log(error.message);
     }
@@ -104,6 +100,8 @@ router.post("/callback", async (req, res) => {
         const parsedData = JSON.parse(embed_data);
         // Access id_order
         const id_order = parsedData.id_order;
+        console.log(id_order);
+        console.log({ app_id });
 
 
         result = { return_code: 1, return_message: "Success" };
@@ -115,7 +113,8 @@ router.post("/callback", async (req, res) => {
 });
 
 // Cập nhật trạng thái thanh toán
-async function updatePaymentStatus(app_trans_id) {
+async function updatePaymentStatus(app_trans_id) 
+{
     try {
         await client.connect();
         const db = client.db("PBL6");
@@ -131,7 +130,6 @@ async function updatePaymentStatus(app_trans_id) {
         // Lấy `id_order` của bản ghi vừa cập nhật trong `payments`
         const paymentRecord = await paymentsCollection.findOne({ trans_id: app_trans_id });
         const id_order = paymentRecord?.id_order;
-        console.log({id_order});
         // Tìm và cập nhật trạng thái của bản ghi tương ứng trong `orders`
         const ordersCollection = db.collection("orders");
         const orderResult = await ordersCollection.updateOne(
@@ -190,6 +188,69 @@ router.post("/order-status/:app_trans_id", async (req, res) => {
         return res.status(200).json(result.data);
     } catch (error) {
         console.log(error.message);
+    }
+});
+
+router.put("/updateStatus", authenticateToken, async (req, res) => {
+    const { id_order } = req.body;
+    
+    console.log("Received request with id_order:", id_order);
+
+    if (!id_order) {
+        console.log("Error: id_order is missing from the request body");
+        return res.status(400).json({ message: "id_order is required" });
+    }
+
+    try {
+        await client.connect();
+        console.log("Connected to MongoDB");
+
+        const db = client.db("PBL6");
+        const paymentsCollection = db.collection("payments");
+
+        // Tìm và cập nhật bản ghi trong `payments`
+        const { modifiedCount } = await paymentsCollection.updateOne(
+            { id_order: id_order },
+            { $set: { status: 1, payment_at: new Date() } }
+        );
+
+        console.log("Payments collection update result:", modifiedCount);
+
+        if (modifiedCount === 0) {
+            console.log("Payment record not found or already updated");
+            return res.status(404).json({ message: "Payment record not found or already updated" });
+        }
+
+        // Lấy `id_order` của bản ghi vừa cập nhật trong `payments`
+        const paymentRecord = await paymentsCollection.findOne({ id_order: id_order });
+        console.log("Fetched paymentRecord:", paymentRecord);
+
+        if (!paymentRecord) {
+            console.log("Error: paymentRecord not found after update");
+            return res.status(404).json({ message: "Payment record not found after update" });
+        }
+
+        // Tìm và cập nhật trạng thái trong `orders`
+        const ordersCollection = db.collection("orders");
+        const orderResult = await ordersCollection.updateOne(
+            { _id: id_order },
+            { $set: { status: 6 } }
+        );
+
+        console.log("Orders collection update result:", orderResult.modifiedCount);
+
+        if (orderResult.modifiedCount === 0) {
+            console.log("Order record not found or already updated");
+            return res.status(404).json({ message: "Order record not found or already updated" });
+        }
+
+        // Trả về phản hồi thành công với mã 201
+        console.log("Status updated successfully for id_order:", id_order);
+        return res.status(200).json();
+
+    } catch (error) {
+        console.error("Lỗi khi cập nhật app_trans_id:", error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 });
 
