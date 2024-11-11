@@ -1,44 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { MongoClient, ObjectId, ServerApiVersion } = require('mongodb'); // Thêm ObjectId
 
-const SECRET_KEY = '0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1'; // Thay thế bằng secret key của bạn
-
-// MongoDB connection (nếu không cần tái sử dụng kết nối từ file chính)
-const uri = "mongodb+srv://tdv0905179758:qMdBYWg45uwOUz9F@viet.fn3ykhs.mongodb.net/?retryWrites=true&w=majority&appName=Viet";
-const client = new MongoClient(uri, {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    }
-});
 // Middleware để parse JSON body
 router.use(express.json());
-// Middleware để xác thực token
-const authenticateToken = (req, res, next) => {
-    const token = req.headers['authorization'] && req.headers['authorization'].split(' ')[1];
-    if (!token) return res.status(401).json({ message: 'No token provided' }); // Không có token
+const { authenticateToken } = require("../middleware/authenticateToken");
+const { client } = require("../db");
 
-    jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) {
-            // Kiểm tra xem lỗi có phải là do token hết hạn hay không
-            if (err.name === 'TokenExpiredError') {
-                return res.status(401).json({ message: 'Token has expired' }); // Token hết hạn
-            }
-            return res.status(401).json({ message: 'Invalid token' }); // Token không hợp lệ
-        }
-        req.user = user; // Lưu thông tin người dùng vào request
-        next();
-    });
-};
+
 // Route để thêm sản phẩm vào giỏ hàng
 router.post('/cartItem/add', authenticateToken, async (req, res) => {
     const { id_product_variant, category, quantity } = req.body;
     const userId = req.user.userId;  // Lấy id_user từ token sau khi xác thực
     console.log(req.body);
     try {
+        await client.connect(); 
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
@@ -84,6 +60,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
 
     try {
+        await client.connect(); 
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
         const productsCollection = db.collection('products'); // Collection chứa thông tin sản phẩm chung
@@ -147,14 +124,14 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
         }));
 
         // Trả về danh sách item hoàn chỉnh
-        res.json(completeCartItems);
+        res.status(200).json(completeCartItems);
     } catch (error) {
         console.error('Error loading cart items:', error); // In ra lỗi nếu có
         res.status(500).json({ message: "Lỗi máy chủ", error });
     }
 });
 // Route để cập nhật giỏ hàng
-router.post('/cartItems/update', authenticateToken, async (req, res) => {
+router.put('/cartItems/update', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
     const cartItems = req.body; // Nhận danh sách cart items cần cập nhật
     console.log(req.body);
@@ -163,6 +140,7 @@ router.post('/cartItems/update', authenticateToken, async (req, res) => {
     const idsToKeep = cartItems.map(item => item.id);
 
     try {
+        await client.connect(); 
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
@@ -205,19 +183,37 @@ router.post('/cartItems/update', authenticateToken, async (req, res) => {
             _id: { $nin: idsToKeep.map(id => id) } 
         });
 
-        res.status(200).json({ message: 'Cập nhật giỏ hàng thành công!' });
+        res.status(201).json();
     } catch (error) {
         console.error('Error updating cart items:', error); // In ra lỗi nếu có
         res.status(500).json({ message: 'Lỗi máy chủ', error });
     }
 });
-// Route test đơn giản để kiểm tra nhận dữ liệu từ client
-router.post('/test', (req, res) => {
-    console.log("Request body:", req.body);
-    res.json({
-        message: "Test route received data",
-        body: req.body,
-    });
+//Web gọi api này khi muốn delete 1 sp trong giỏ
+router.put('/cartItems/delete', authenticateToken, async (req, res) => {
+    const userId = req.user.userId; // Lấy id_user từ token
+    const { id_item } = req.body; // Nhận id của item cần xóa từ body request
+    console.log({id_item});
+    try {
+        await client.connect(); 
+        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
+
+        // Xóa sản phẩm có id_item và thuộc về user
+        const result = await cartItemsCollection.deleteOne({
+            _id: id_item,
+            id_user: userId
+        });
+
+        if (result.deletedCount > 0) {
+            res.status(200).json();
+        } else {
+            res.status(404).json({ message: 'Sản phẩm không tồn tại trong giỏ hàng' });
+        }
+    } catch (error) {
+        console.error('Error deleting cart item:', error); // In ra lỗi nếu có
+        res.status(500).json({ message: 'Lỗi máy chủ', error });
+    }
 });
 
 module.exports = router;
