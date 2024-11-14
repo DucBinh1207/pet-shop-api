@@ -380,9 +380,9 @@ async function verifyEmail(token) {
   }
 }
 
-function generateToken(userId, isRememberMe) {
+function generateToken(userId, isRememberMe, id_role) {
   const expiresIn = isRememberMe ? "30d" : "1h"; // 30 ngày hoặc 1 giờ
-  return jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, { expiresIn });
+  return jwt.sign({ userId, id_role }, process.env.ACCESS_TOKEN_SECRET, { expiresIn });
 }
 
 module.exports = {
