@@ -9,7 +9,7 @@ router.get('/products/pets', async (req, res) => {
     const productsCollection = database.collection('products');
     const petsCollection = database.collection('pets');
 
-    // Query parameters
+    // Query parameters0000000000000
     const category = req.query.category || 'all'; // Default to 'all'
     const sortBy = req.query.sortBy || 'default';
     const minPrice = parseFloat(req.query.minPrice) || 0;

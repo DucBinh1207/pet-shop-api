@@ -50,6 +50,7 @@ router.post("/login", async (req, res) => {
     } else {
       // Status 401 for authentication errors
       // res.status(401).json({ message: result.message });
+      console.log(result.status);
       res.status(result.status).json({ message: result.message });
     }
   } catch (err) {
@@ -86,19 +87,12 @@ router.post("/logout", authenticateToken, async (req, res) => {
       const currentTime = Math.floor(Date.now() / 1000);
       const remainingTime = expirationTime - currentTime;
 
-      const userToken = process.env.PREFIX_AUTH_TOKEN + decoded.userId;
+      const userToken = process.env.PREFIX_AUTH_TOKEN + "_" + token;
 
-      if (await redis.exists(userToken)) {
-        return res.status(401).json({
-          success: false,
-          message: "Token has expired. Please request a new token.",
-        });
-      } else {
-        await redis.set(userToken, token, {
-          EX: remainingTime,
-        });
-        res.status(200).json();
-      }
+      await redis.set(userToken, token, {
+        EX: remainingTime,
+      });
+      res.status(200).json();
     }
   } catch (err) {
     res.status(500).json();
