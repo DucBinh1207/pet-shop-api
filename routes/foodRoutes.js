@@ -21,6 +21,8 @@ router.get('/products/foods', async (req, res) => {
 
     // Filters
     let filters = {
+      'status': 1, // Ensure status = 1 in products collection
+      'foods.status': 1, // Ensure status = 1 in foods collection
       'foods.price': { $gte: minPrice, $lte: maxPrice },
     };
 
@@ -69,8 +71,20 @@ router.get('/products/foods', async (req, res) => {
           date_created: { $first: '$date_created' },
           rating: { $first: '$rating' },
           category: { $first: '$category' },
-          variations_foods: { $push: '$foods' },
-          min_price: { $min: '$foods.price' }
+          pet_type: { $first: '$foods.pet_type' },
+          nutrition_info: { $first: '$foods.nutrition_info' },
+          expire_date: { $first: '$foods.expire_date' },
+          brand: { $first: '$foods.brand' },
+          variations_foods: {
+            $push: {
+              ingredient: '$foods.ingredient',
+              weight: '$foods.weight',
+              price: '$foods.price',
+              quantity: '$foods.quantity',
+              date_created: '$foods.date_created'
+
+            }
+          }
         }
       },
       {
