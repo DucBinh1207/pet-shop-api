@@ -23,11 +23,30 @@ router.get('/orders/user', authenticateToken, async (req, res) => {
         if (orders.length === 0) {
             return res.status(404).json({ message: 'Không có đơn hàng nào' });
         }
+        // Custom tên trường trả về
+        const customOrders = orders.map(order => ({
+            id: order._id,
+            name: order.name,
+            telephone_number: order.telephone_number,
+            email: order.email,
+            total_price: order.total_price,
+            shipping_price: order.shipping_price,
+            subtotal_price: order.subtotal_price,
+            date_created: order.date,
+            province: order.province,
+            district: order.district,
+            ward: order.ward,
+            street: order.street,
+            voucher_code: order.voucher_code,
+            payment_method: order.payment_method,
+            note: order.note,
+            status: order.status
+        }));
 
-        return res.status(200).json(orders); // Trả về danh sách đơn hàng
+        return res.status(200).json(customOrders);
     } catch (err) {
         console.error("Lỗi khi lấy đơn hàng:", err);
-        return res.status(500).json({ message: 'Lỗi server khi lấy danh sách đơn hàng' });
+        return res.status(500).json({ message: 'Internal server error' });
     }
 });
 // Lấy thông tin 1 order của user từ id_order
@@ -50,8 +69,8 @@ router.get('/orders/user/detail', authenticateToken, async (req, res) => {
 
         // Chuẩn bị thông tin đơn hàng để trả về
         const orderInfo = {
-            _id: order._id,
-            date: order.date,
+            id: order._id,
+            date_created: order.date,
             status: order.status,
             subtotal_price: order.subtotal_price,
             shipping_price: order.shipping_price,
@@ -229,8 +248,8 @@ router.get('/orders/user/items', authenticateToken, async (req, res) => {
         //console.log("orderItems:", orderItems);
         const completeOrderItems = await Promise.all(orderItems.map(async (item) => {
             let completeItem = {
-                _id: item._id.toString(),
-                id_product_variant: item.id_product_variant,
+                id: item._id.toString(),
+                product_variant_id: item.id_product_variant,
                 category: item.category,
                 quantity: item.quantity,
                 ingredient: "",
@@ -311,8 +330,8 @@ router.get('/orders/user/details', authenticateToken, async (req, res) => {
         // Chuẩn bị thông tin chi tiết của các sản phẩm trong đơn hàng
         const completeOrderItems = await Promise.all(orderItems.map(async (item) => {
             let completeItem = {
-                _id: item._id.toString(),
-                id_product_variant: item.id_product_variant,
+                id: item._id.toString(),
+                product_variant_id: item.id_product_variant,
                 category: item.category,
                 quantity: item.quantity,
                 ingredient: "",
@@ -357,8 +376,8 @@ router.get('/orders/user/details', authenticateToken, async (req, res) => {
 
         // Thêm danh sách sản phẩm vào thông tin đơn hàng
         const orderInfo = {
-            _id: order._id,
-            date: order.date,
+            id: order._id,
+            date_created: order.date,
             status: order.status,
             subtotal_price: order.subtotal_price,
             shipping_price: order.shipping_price,

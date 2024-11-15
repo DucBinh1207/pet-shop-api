@@ -12,60 +12,40 @@ router.get('/products/supplies/:id', async (req, res) => {
     // Get the product id from the URL
     const productId = req.params.id;
 
-    // Aggregation pipeline
-    const pipeline = [
-      {
-        // Step 1: Match the product by id
-        $match: { _id: productId },
-      },
-      {
-        // Step 2: Lookup supplies collection to combine with product, with status = 1 condition
-        $lookup: {
-          from: 'supplies',
-          let: { product_id: '$_id' },
-          pipeline: [
-            { $match: { $expr: { $and: [{ $eq: ['$id_product', '$$product_id'] }, { $eq: ['$status', 1] }] } } }
-          ],
-          as: 'supplies',
-        },
-      },
-      {
-        // Step 3: Unwind supplies array
-        $unwind: '$supplies',
-      },
-      {
-        // Step 4: Group by product, collecting all variations into an array
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          image: { $first: '$image' },
-          date_created: { $first: '$date_created' },
-          rating: { $first: '$rating' },
-          category: { $first: '$category' },
-          material: { $first: '$supplies.material' }, // Add material
-          brand: { $first: '$supplies.brand' },       // Add brand
-          type: { $first: '$supplies.type' },         // Add type
-          variations_supplies: {
-            $push: {
-              id_variation: '$supplies._id',
-              color: '$supplies.color',
-              size: '$supplies.size',
-              price: '$supplies.price',
-            }, // Keep only the required fields
-          },
-        },
-      },
-    ];
+    // Fetch the product from the products collection
+    const product = await productsCollection.findOne({ _id: productId });
 
-    // Execute the aggregation
-    const product = await productsCollection.aggregate(pipeline).toArray();
-
-    if (product.length === 0) {
+    if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json(product[0]); // Return the single product
+    // Fetch supplies linked to the product, ensuring status = 1
+    const supplies = await suppliesCollection
+      .find({ id_product: productId, status: 1 })
+      .toArray();
+
+    // Construct the response object
+    const response = {
+      id: product._id,
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      date_created: product.date_created,
+      rating: product.rating,
+      category: product.category,
+      material: supplies[0]?.material || null, // Use the first variation for shared fields
+      brand: supplies[0]?.brand || null,       // Use the first variation for shared fields
+      type: supplies[0]?.type || null,         // Use the first variation for shared fields
+      variations_supplies: supplies.map(supply => ({
+        product_variant_id: supply._id,
+        color: supply.color,
+        size: supply.size,
+        price: supply.price,
+        quantity: supply.quantity
+      })),
+    };
+
+    res.json(response);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -85,40 +65,30 @@ router.get('/products/foods/:id', async (req, res) => {
     const productsCollection = database.collection('products');
 
     // Lấy thông tin food theo ID
-    const food = await foodsCollection.findOne({ id_product: foodId });
+    const food = await foodsCollection.findOne({ id_product: foodId, status: 1 });
 
     if (!food) {
-      return res.status(404).json({ message: "Food không tồn tại" });
+      return res.status(404).json({ message: "Food không tồn tại hoặc đã bị ẩn" });
     }
 
     // Lấy thông tin sản phẩm tương ứng
-    const product = await productsCollection.findOne({ _id: food.id_product });
+    const product = await productsCollection.findOne({ _id: food.id_product, status: 1 });
 
     if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+      return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị ẩn" });
     }
 
-    // Lấy tất cả variations của sản phẩm từ bảng food
-    const allVariations = await foodsCollection.find({ id_product: product._id }).toArray();
+    // Lấy tất cả variations của sản phẩm từ bảng foods
+    const allVariations = await foodsCollection.find({ id_product: product._id, status: 1 }).toArray();
 
-    // Tạo mảng variations_food từ allVariations và xử lý ingredient và weight
-    const variationsFood = allVariations.map(variation => {
-      let ingredient = variation.ingredient;
-      if (ingredient === "Chicken") {
-        ingredient = "Gà";
-      } else if (ingredient === "Beef") {
-        ingredient = "Bò";
-      }
-
-      let weight = variation.weight;
-      return {
-        id_variation: variation._id,
-        ingredient: ingredient,
-        weight: weight,
-        price: variation.price,
-        quantity: variation.quantity
-      };
-    });
+    // Xử lý variations_food
+    const variationsFood = allVariations.map(variation => ({
+      product_variant_id: variation._id,
+      ingredient: variation.ingredient === "Chicken" ? "Gà" : variation.ingredient === "Beef" ? "Bò" : variation.ingredient,
+      weight: variation.weight,
+      price: variation.price,
+      quantity: variation.quantity,
+    }));
 
     // Tạo đối tượng response
     const responseData = {
@@ -127,7 +97,6 @@ router.get('/products/foods/:id', async (req, res) => {
       name: product.name,
       description: product.description,
       image: product.image,
-      status: product.status,
       date_created: product.date_created,
       rating: product.rating,
       pet_type: food.pet_type,
@@ -141,8 +110,11 @@ router.get('/products/foods/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error' });
+  } finally {
+    await client.close(); // Đảm bảo đóng kết nối MongoDB
   }
 });
+
 
 router.get('/products/pets/:id', async (req, res) => {
   try {
@@ -155,31 +127,31 @@ router.get('/products/pets/:id', async (req, res) => {
     const productsCollection = database.collection('products');
 
     // Lấy thông tin pet theo ID
-    const pet = await petsCollection.findOne({ id_product: petId });
+    const pet = await petsCollection.findOne({ id_product: petId, status: 1 });
 
     if (!pet) {
-      return res.status(404).json({ message: "Pet không tồn tại" });
+      return res.status(404).json({ message: "Pet không tồn tại hoặc đã bị ẩn" });
     }
 
     // Lấy thông tin sản phẩm tương ứng
-    const product = await productsCollection.findOne({ _id: pet.id_product });
+    const product = await productsCollection.findOne({ _id: pet.id_product, status: 1 });
 
     if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+      return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị ẩn" });
     }
 
     // Lấy tất cả variations của sản phẩm từ bảng pets
-    const allVariations = await petsCollection.find({ 
-      id_product: product._id, 
-      status: 1 
+    const allVariations = await petsCollection.find({
+      id_product: product._id,
+      status: 1,
     }).toArray();
 
-    // Tạo mảng variations_pets từ allVariations
+    // Xử lý variations_pets
     const variationsPets = allVariations.map(variation => ({
-      id_variation: variation._id,
+      product_variant_id: variation._id,
       price: variation.price,
       gender: variation.gender,
-      health:variation.health,
+      health: variation.health,
       father: variation.father,
       mother: variation.mother,
       type: variation.type,
@@ -210,9 +182,10 @@ router.get('/products/pets/:id', async (req, res) => {
     console.error(err);
     res.status(500).json({ message: 'Internal Server Error' });
   } finally {
-    await client.close();
+    await client.close(); // Đảm bảo đóng kết nối MongoDB
   }
 });
+
 
 // Partially update product by ID
 router.patch('/products/:type/:id', async (req, res) => {

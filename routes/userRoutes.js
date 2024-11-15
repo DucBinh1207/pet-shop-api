@@ -38,7 +38,6 @@ router.get('/user/info', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
-
 // API để thay đổi mật khẩu người dùng trong trang user
 router.put('/user/change-password', authenticateToken, async (req, res) => {
     const { oldPassword, newPassword } = req.body;
@@ -163,5 +162,6 @@ router.put('/user/update', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
+
 
 module.exports = router;

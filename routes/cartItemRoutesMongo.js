@@ -58,7 +58,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
 // Route load sản phẩm giỏ hàng của 1 user
 router.get("/cartItems", authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
-
+    console.log({userId});
     try {
         await client.connect(); 
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
@@ -79,8 +79,8 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
         // Tạo một danh sách để lưu các item hoàn chỉnh
         const completeCartItems = await Promise.all(cartItems.map(async (item) => {
             let completeItem = {
-                _id: item._id,
-                id_product_variant: item.id_product_variant,
+                id: item._id,
+                product_variant_id: item.id_product_variant,
                 category: item.category,
                 quantity: item.quantity,
                 ingredient: "",
