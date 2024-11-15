@@ -3,11 +3,12 @@ const multer = require('multer');
 const router = express.Router();
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { client } = require("../db");
-const { 
+const {
     addPet,
     addFood,
     addSupplies,
-    updatePet } = require("../product-admin/product");
+    updatePet,
+    updateFood } = require("../product-admin/product");
 
 
 router.use(express.json());
@@ -82,7 +83,7 @@ router.post('/admin/products/create', authenticateToken, upload.single('image'),
                 if (result.success) {
                     res.status(201).json();
                 } else {
-                    res.status(401).json({ message: result.message });
+                    res.status(400).json({ message: result.message });
                 }
             } catch (err) {
                 res.status(500).json({ message: "Internal server error" });
@@ -165,18 +166,13 @@ router.post('/admin/products/create', authenticateToken, upload.single('image'),
     }
 });
 
-router.post('/admin/products/update', authenticateToken, async (req, res) => {
+router.put('/admin/products/update', authenticateToken, upload.single('image'), async (req, res) => {
     const id_role = req.user.id_role;
-
-    upload.single('image');
-    
     // Kiểm tra quyền truy cập
     if (id_role !== 2) {
         return res.status(400).json({ message: 'Access denied. You are not an admin.' });
     }
-
     const { nameTag } = req.body;
-    console.log("File:", req.file);
     console.log("Body:", req.body);
 
     // Xử lý theo nameTag
@@ -207,6 +203,7 @@ router.post('/admin/products/update', authenticateToken, async (req, res) => {
             // Thêm sản phẩm vào cơ sở dữ liệu
             try {
                 const result = await updatePet(
+                    _id,
                     petName,
                     petDescription,
                     imagePathPet,
@@ -225,9 +222,9 @@ router.post('/admin/products/update', authenticateToken, async (req, res) => {
                     petQuantity
                 );
                 if (result.success) {
-                    res.status(201).json();
+                    res.status(200).json();
                 } else {
-                    res.status(401).json({ message: result.message });
+                    res.status(400).json({ message: result.message });
                 }
             } catch (err) {
                 res.status(500).json({ message: "Internal server error" });
@@ -236,6 +233,7 @@ router.post('/admin/products/update', authenticateToken, async (req, res) => {
 
         case 'foods':
             const {
+                _id: _idFood,
                 name: foodName,
                 description: foodDescription,
                 pet_type: pet_type,
@@ -249,7 +247,8 @@ router.post('/admin/products/update', authenticateToken, async (req, res) => {
             // Kiểm tra xem có variations_food hay không
             const foodVariations = variations_food ? JSON.parse(variations_food) : [];
             try {
-                const result = await addFood(
+                const result = await updateFood(
+                    _idFood,
                     foodName,
                     foodDescription,
                     imagePathFood, // Sử dụng đường dẫn của ảnh thay vì image từ body
@@ -307,6 +306,53 @@ router.post('/admin/products/update', authenticateToken, async (req, res) => {
         default:
             // Trả về lỗi nếu nameTag không hợp lệ
             return res.status(400).json({ message: 'Invalid nameTag value.' });
+    }
+});
+
+router.get('/admin/products/get', authenticateToken, upload.single('image'), async (req, res) => {
+    const id_role = req.user.id_role;
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2) {
+        return res.status(400).json({ message: 'Access denied. You are not an admin.' });
+    }
+
+    const { nameTag } = req.body;
+    try {
+        switch (nameTag) {
+            case 'pets':
+                // Query parameters
+                const category = req.query.category || 'all'; // Default to 'all'
+                const breeds = req.query.breeds ? req.query.breeds.split(',') : [];
+                const sortBy = req.query.sortBy || 'default';
+                const minPrice = parseFloat(req.query.minPrice) || 0;
+                const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
+                const page = parseInt(req.query.page) || 1;
+                const limit = parseInt(req.query.limit) || 10;
+
+                // Call getPet function and return the result as JSON
+                const { products, totalPages } = await getPet(category, breeds, sortBy, minPrice, maxPrice, page, limit);
+                return res.json({
+                    products,
+                    currentPage: page,
+                    limit,
+                    totalPages,
+                });
+
+            case 'foods':
+                // Call getFood function and return the result as JSON (implement similar to getPet if needed)
+                break;
+
+            case 'supplies':
+                // Call getSupplies function and return the result as JSON (implement similar to getPet if needed)
+                break;
+
+            default:
+                // Trả về lỗi nếu nameTag không hợp lệ
+                return res.status(400).json({ message: 'Invalid nameTag value.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 module.exports = router;

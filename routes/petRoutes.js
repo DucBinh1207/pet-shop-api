@@ -80,7 +80,6 @@ router.get('/products/pets', async (req, res) => {
           rating: { $first: '$rating' },
           category: { $first: '$category' },
           variations_pets: { $push: '$pets' },
-          min_price: { $min: '$pets.price' }
         }
       },
       {
