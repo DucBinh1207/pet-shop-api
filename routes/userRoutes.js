@@ -1,16 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require("bcrypt");
-
+const multer = require('multer');
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { client } = require("../db");
+// Cấu hình multer để lưu trữ ảnh
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Thư mục lưu ảnh
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname); // Tạo tên file duy nhất
+    }
+});
+const {
+    updateAvatarUser
+} = require("../image/image");
 
+const upload = multer({ storage: storage });
+
+// API để get thông tin user
 router.get('/user/info', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id từ token
 
     try {
-        await client.connect(); 
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
@@ -44,7 +59,7 @@ router.put('/user/change-password', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id người dùng từ token
 
     try {
-        await client.connect(); 
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
@@ -76,13 +91,13 @@ router.put('/user/change-password', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
-// API để cập nhật thông tin người dùng
+// API để cập nhật thông tin địa chỉ
 router.put('/user/updateAddress', authenticateToken, async (req, res) => {
     const { province, district, ward, street } = req.body;
     const userId = req.user.userId; // Lấy id người dùng từ token
 
     try {
-        await client.connect(); 
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
@@ -118,13 +133,13 @@ router.put('/user/updateAddress', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
-
+// API cho mobile để update thông tin người dùng
 router.put('/user/update', authenticateToken, async (req, res) => {
     const { name, telephone_number, nationality, image } = req.body;
     const userId = req.user.userId; // Lấy id người dùng từ token
     console.log(userId);
     try {
-        await client.connect(); 
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
@@ -162,6 +177,30 @@ router.put('/user/update', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
+// API cho web để update hoặc create avatar
+router.post('/user/avatar', authenticateToken, upload.single('image'), async (req, res) => {
+    const userId = req.user.userId; // Lấy id từ token
 
+    if (!req.file) {
+        return res.status(400).json(); // Nếu không có file ảnh
+    }
 
+    try {
+        // Lấy đường dẫn của ảnh đã upload
+        const imagePath = req.file.path;
+
+        // Cập nhật avatar người dùng
+        const updateResult = await updateAvatarUser(userId, imagePath);
+
+        if (updateResult.success) {
+            // Trả về kết quả thành công với URL ảnh mới
+            return res.status(200).json();
+        } else {
+            return res.status(500).json({ message: updateResult.message });
+        }
+    } catch (error) {
+        console.error('Error updating avatar:', error);
+        return res.status(500).json({ message: "Lỗi máy chủ", error });
+    }
+});
 module.exports = router;
