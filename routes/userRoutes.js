@@ -6,6 +6,7 @@ router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { client } = require("../db");
 
+// API để get thông tin user
 router.get('/user/info', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id từ token
 
@@ -76,7 +77,7 @@ router.put('/user/change-password', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
-// API để cập nhật thông tin người dùng
+// API để cập nhật thông tin địa chỉ
 router.put('/user/updateAddress', authenticateToken, async (req, res) => {
     const { province, district, ward, street } = req.body;
     const userId = req.user.userId; // Lấy id người dùng từ token
@@ -118,7 +119,7 @@ router.put('/user/updateAddress', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
-
+// API cho mobile để update thông tin người dùng
 router.put('/user/update', authenticateToken, async (req, res) => {
     const { name, telephone_number, nationality, image } = req.body;
     const userId = req.user.userId; // Lấy id người dùng từ token
@@ -162,6 +163,23 @@ router.put('/user/update', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
+// API cho web để update avatar
+router.post('/user/updateAvatar', authenticateToken, async (req, res) => {
+    const userId = req.user.userId; // Lấy id từ token
 
+    try {
+        await client.connect(); 
+        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
+        // Tìm người dùng theo _id từ MongoDB
+        console.log("userId (from token):", userId); // Log ra giá trị userId
+        const user = await usersCollection.findOne({ _id: userId, status: 1 });
+
+        
+    } catch (error) {
+        console.error('Error fetching user info:', error); // In ra lỗi nếu có
+        res.status(500).jsonp({ message: "Lỗi máy chủ", error });
+    }
+});
 module.exports = router;

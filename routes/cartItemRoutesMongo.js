@@ -6,7 +6,12 @@ const jwt = require('jsonwebtoken');
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { client } = require("../db");
-
+const {
+    checkValidProduct,
+    checkProductStockForCart,
+    checkProductStock,
+    checkProductAvailability
+} = require("../product/product");
 
 // Route để thêm sản phẩm vào giỏ hàng
 router.post('/cartItem/add', authenticateToken, async (req, res) => {
@@ -14,7 +19,20 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
     const userId = req.user.userId;  // Lấy id_user từ token sau khi xác thực
     console.log(req.body);
     try {
-        await client.connect(); 
+        // Kiểm tra tính hợp lệ của sản phẩm
+        const productCheck = await checkValidProduct(id_product_variant, category);
+        if (!productCheck.success) {
+            console.log("SP hết hàng hoặc ko còn tồn tại");
+            return res.status(400).json();
+        }
+
+        const productCheckQuantity = await checkProductStockForCart(id_product_variant, category, quantity);
+        if (!productCheckQuantity.success) {
+            console.log("SP ko đủ hàng");
+            return res.status(400).json();
+        }
+
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
@@ -58,9 +76,9 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
 // Route load sản phẩm giỏ hàng của 1 user
 router.get("/cartItems", authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
-    console.log({userId});
+    console.log({ userId });
     try {
-        await client.connect(); 
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
         const productsCollection = db.collection('products'); // Collection chứa thông tin sản phẩm chung
@@ -73,7 +91,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
 
         // Kiểm tra nếu không có sản phẩm trong giỏ hàng
         if (!cartItems.length) {
-            return res.status(404).json({ message: "Giỏ hàng trống" });
+            return res.status(200).json();
         }
 
         // Tạo một danh sách để lưu các item hoàn chỉnh
@@ -82,11 +100,15 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
                 id: item._id,
                 product_variant_id: item.id_product_variant,
                 category: item.category,
-                quantity: item.quantity,
+                name: "",
+                quantity: parseInt(item.quantity, 10),
                 ingredient: "",
                 weight: "",
                 size: "",
-                color: ""
+                color: "",
+                price: "",
+                image: "",
+                status: null
             };
 
             // Lấy thông tin từ bảng pet, food hoặc supplies dựa trên category
@@ -97,6 +119,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
                     completeItem.name = productInfo.name;
                     completeItem.price = petInfo.price;
                     completeItem.image = productInfo.image;
+                    completeItem.status = 1;
                 }
             } else if (item.category === "foods") {
                 const foodInfo = await foodCollection.findOne({ _id: item.id_product_variant });
@@ -107,6 +130,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
                     completeItem.image = productInfo.image;
                     completeItem.ingredient = foodInfo.ingredient;
                     completeItem.weight = foodInfo.weight;
+                    completeItem.status = 1;
                 }
             } else if (item.category === "supplies") {
                 const suppliesInfo = await suppliesCollection.findOne({ _id: item.id_product_variant });
@@ -117,12 +141,34 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
                     completeItem.price = suppliesInfo.price;
                     completeItem.size = suppliesInfo.size;
                     completeItem.color = suppliesInfo.color;
+                    completeItem.status = 1;
                 }
             }
 
+            const productCheckStock = await checkProductStock(completeItem.product_variant_id, completeItem.category);
+            if (!productCheckStock.success) {
+                console.log("SP hết hàng ");
+                completeItem.status = 2;
+            } else {
+                // Nếu số lượng trong giỏ hàng lớn hơn tồn kho, điều chỉnh lại
+                if (item.quantity > productCheckStock.availableQuantity) {
+                    completeItem.quantity = productCheckStock.availableQuantity; // Điều chỉnh lại số lượng trong giỏ
+                    // Cập nhật lại số lượng trong giỏ hàng
+                    await cartItemsCollection.updateOne(
+                        { _id: item._id },
+                        { $set: { quantity: productCheckStock.availableQuantity } }
+                    );
+                }
+            }
+            const productCheckAvailability = await checkProductAvailability(completeItem.product_variant_id, completeItem.category);
+            if (!productCheckAvailability.success) {
+                console.log("SP đã bị xóa ");
+                completeItem.status = 3;
+            }
             return completeItem; // Trả về item hoàn chỉnh
         }));
 
+        completeCartItems.sort((a, b) => a.status - b.status);
         // Trả về danh sách item hoàn chỉnh
         res.status(200).json(completeCartItems);
     } catch (error) {
@@ -140,7 +186,7 @@ router.put('/cartItems/update', authenticateToken, async (req, res) => {
     const idsToKeep = cartItems.map(item => item.id);
 
     try {
-        await client.connect(); 
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
@@ -180,7 +226,7 @@ router.put('/cartItems/update', authenticateToken, async (req, res) => {
         // Xóa các item không có trong danh sách cartItems
         await cartItemsCollection.deleteMany({
             id_user: userId,
-            _id: { $nin: idsToKeep.map(id => id) } 
+            _id: { $nin: idsToKeep.map(id => id) }
         });
 
         res.status(201).json();
@@ -193,9 +239,9 @@ router.put('/cartItems/update', authenticateToken, async (req, res) => {
 router.put('/cartItems/delete', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
     const { id_item } = req.body; // Nhận id của item cần xóa từ body request
-    console.log({id_item});
+    console.log({ id_item });
     try {
-        await client.connect(); 
+        await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
@@ -213,6 +259,57 @@ router.put('/cartItems/delete', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error deleting cart item:', error); // In ra lỗi nếu có
         res.status(500).json({ message: 'Lỗi máy chủ', error });
+    }
+});
+//Route check sản phẩm có hợp lệ trc khi chuyển qua thanh toán
+router.get("/cartItems/verify", authenticateToken, async (req, res) => {
+    const userId = req.user.userId; // Lấy id_user từ token
+    console.log({ userId });
+    try {
+        await client.connect();
+        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
+
+        // Tìm tất cả cart items của user trong MongoDB
+        const cartItems = await cartItemsCollection.find({ id_user: userId }).toArray();
+
+        // Kiểm tra nếu không có sản phẩm trong giỏ hàng
+        if (!cartItems.length) {
+            return res.status(200).json();
+        }
+
+        // Kiểm tra từng item trong giỏ hàng
+        for (const item of cartItems) {
+            // Kiểm tra số lượng tồn kho
+            const productCheckStock = await checkProductStock(item.id_product_variant, item.category);
+            if (!productCheckStock.success) {
+                console.log("Sản phẩm hết hàng: ", item.id_product_variant);
+                return res.status(400).json();
+            }
+            // Nếu số lượng trong giỏ hàng lớn hơn tồn kho, điều chỉnh lại
+            if (item.quantity > productCheckStock.availableQuantity) {
+                // Cập nhật lại số lượng trong giỏ hàng
+                await cartItemsCollection.updateOne(
+                    { _id: item._id },
+                    { $set: { quantity: productCheckStock.availableQuantity } }
+                );
+                return res.status(400).json();
+            }
+
+            // Kiểm tra tính khả dụng của sản phẩm
+            const productCheckAvailability = await checkProductAvailability(item.id_product_variant, item.category);
+            if (!productCheckAvailability.success) {
+                console.log("Sản phẩm đã bị xóa: ", item.id_product_variant);
+                return res.status(400).json();
+            }
+        }
+
+        // Nếu tất cả đều hợp lệ, trả về thành công
+        res.status(200).json();
+
+    } catch (error) {
+        console.error('Error loading cart items:', error); // In ra lỗi nếu có
+        res.status(500).json({ message: "Lỗi máy chủ", error });
     }
 });
 
