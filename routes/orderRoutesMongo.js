@@ -23,11 +23,30 @@ router.get('/orders/user', authenticateToken, async (req, res) => {
         if (orders.length === 0) {
             return res.status(404).json({ message: 'Không có đơn hàng nào' });
         }
+        // Custom tên trường trả về
+        const customOrders = orders.map(order => ({
+            id: order._id,
+            name: order.name,
+            telephone_number: order.telephone_number,
+            email: order.email,
+            total_price: order.total_price,
+            shipping_price: order.shipping_price,
+            subtotal_price: order.subtotal_price,
+            date_created: order.date,
+            province: order.province,
+            district: order.district,
+            ward: order.ward,
+            street: order.street,
+            voucher_code: order.voucher_code,
+            payment_method: order.payment_method,
+            note: order.note,
+            status: order.status
+        }));
 
-        return res.status(200).json(orders); // Trả về danh sách đơn hàng
+        return res.status(200).json(customOrders);
     } catch (err) {
         console.error("Lỗi khi lấy đơn hàng:", err);
-        return res.status(500).json({ message: 'Lỗi server khi lấy danh sách đơn hàng' });
+        return res.status(500).json({ message: 'Internal server error' });
     }
 });
 // Lấy thông tin 1 order của user từ id_order
@@ -50,8 +69,8 @@ router.get('/orders/user/detail', authenticateToken, async (req, res) => {
 
         // Chuẩn bị thông tin đơn hàng để trả về
         const orderInfo = {
-            _id: order._id,
-            date: order.date,
+            id: order._id,
+            date_created: order.date,
             status: order.status,
             subtotal_price: order.subtotal_price,
             shipping_price: order.shipping_price,
@@ -168,16 +187,60 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
         }
 
         // Tạo danh sách order_items từ cart_items
-        const orderItems = cartItems.map(cartItem => ({
-            id_order: id_order.toString(),
-            id_product_variant: cartItem.id_product_variant,
-            category: cartItem.category,
-            quantity: cartItem.quantity
-        }));
+        const orderItems = await Promise.all(
+            cartItems.map(async (cartItem) => {
+                let option = {};
+
+                // Lấy thông tin chi tiết sản phẩm dựa trên category
+                if (cartItem.category === "pets") {
+                    const pet = await db.collection("pets").findOne({ _id: cartItem.id_product_variant });
+                    const productInfo = await db.collection("products").findOne({ _id: pet.id_product });
+                    if (pet && productInfo) {
+                        option = {
+                            id_product: productInfo._id,
+                            name: productInfo.name,
+                            price: pet.price,
+                        };
+                    }
+                } else if (cartItem.category === "foods") {
+                    const food = await db.collection("foods").findOne({ _id: cartItem.id_product_variant });
+                    const productInfo = await db.collection("products").findOne({ _id: food.id_product });
+                    if (food) {
+                        option = {
+                            id_product: productInfo._id,
+                            name: productInfo.name,
+                            ingredient: food.ingredient,
+                            weight: food.weight,
+                            price: food.price,
+                        };
+                    }
+                } else if (cartItem.category === "supplies") {
+                    const supplies = await db.collection("supplies").findOne({ _id: cartItem.id_product_variant });
+                    const productInfo = await db.collection("products").findOne({ _id: supplies.id_product });
+                    if (supplies) {
+                        option = {
+                            id_product: productInfo._id,
+                            name: productInfo.name,
+                            color: supplies.color,
+                            size: supplies.size,
+                            price: supplies.price,
+                        };
+                    }
+                }
+
+                // Trả về một object order_item
+                return {
+                    id_order: id_order.toString(),
+                    category: cartItem.category,
+                    quantity: cartItem.quantity,
+                    option: option, // Thêm trường option
+                };
+            })
+        );
 
         // Lưu tất cả order_items vào MongoDB
         await orderItemsCollection.insertMany(orderItems);
-        console.log("Đã thêm order items");
+        console.log("Đã thêm order items với option");
 
         // Xóa tất cả các cart_items có id_user này
         await cartItemsCollection.deleteMany({ id_user: id_user });
@@ -221,55 +284,42 @@ router.get('/orders/user/items', authenticateToken, async (req, res) => {
         const db = client.db("PBL6"); // Kết nối đến database "PBL6"
         const orderItemsCollection = db.collection('order_items'); // Truy cập collection "order_items"
 
+        // Lấy thông tin các order items từ id_order
         const orderItems = await orderItemsCollection.find({ id_order: id_order }).toArray();
 
         if (!orderItems || orderItems.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy sản phẩm nào cho đơn hàng này' });
         }
-        //console.log("orderItems:", orderItems);
+
         const completeOrderItems = await Promise.all(orderItems.map(async (item) => {
             let completeItem = {
-                _id: item._id.toString(),
-                id_product_variant: item.id_product_variant,
+                id: item._id.toString(),
+                id_product: item.option.id_product,
                 category: item.category,
                 quantity: item.quantity,
+                // Dữ liệu mặc định
                 ingredient: "",
                 weight: "",
                 size: "",
-                color: ""
+                color: "",
+                name: item.option.name,  // Lấy name từ option
+                price: item.option.price,  // Lấy price từ option
+                image: ""   // Lấy image từ option
             };
 
-            // Lấy thông tin sản phẩm dựa trên category
-            if (item.category === "pets") {
-                const petInfo = await db.collection("pets").findOne({ _id: item.id_product_variant });
-                const productInfo = await db.collection("products").findOne({ _id: petInfo.id_product });
-                if (petInfo && productInfo) {
-                    completeItem.name = productInfo.name;
-                    completeItem.price = petInfo.price;
-                    completeItem.image = productInfo.image;
-                }
-            } else if (item.category === "foods") {
-                const foodInfo = await db.collection("foods").findOne({ _id: item.id_product_variant });
-                const productInfo = await db.collection("products").findOne({ _id: foodInfo.id_product });
-                // console.log(suppliesInfo.id_product_variant);
-                if (productInfo && foodInfo) {
-                    completeItem.name = productInfo.name;
-                    completeItem.price = foodInfo.price;
-                    completeItem.image = productInfo.image;
-                    completeItem.ingredient = foodInfo.ingredient;
-                    completeItem.weight = foodInfo.weight;
-                }
+            // Lấy thông tin sản phẩm từ bảng "products" dựa trên id_product
+            const product = await db.collection("products").findOne({ _id: item.option.id_product });
+
+            if (product) {
+                completeItem.image = product.image;  // Lấy image từ sản phẩm
+            }
+            // Dựa trên category, lấy thêm các thông tin khác từ option
+            if (item.category === "foods") {
+                completeItem.ingredient = item.option.ingredient;  // Lấy ingredient từ option
+                completeItem.weight = item.option.weight;  // Lấy weight từ option 
             } else if (item.category === "supplies") {
-                const suppliesInfo = await db.collection("supplies").findOne({ _id: item.id_product_variant });
-                //console.log(suppliesInfo.id_product_variant);
-                const productInfo = await db.collection("products").findOne({ _id: suppliesInfo.id_product });
-                if (productInfo && suppliesInfo) {
-                    completeItem.name = productInfo.name;
-                    completeItem.image = productInfo.image;
-                    completeItem.price = suppliesInfo.price;
-                    completeItem.size = suppliesInfo.size;
-                    completeItem.color = suppliesInfo.color;
-                }
+                completeItem.color = item.option.color;  // Lấy color từ option
+                completeItem.size = item.option.size;  // Lấy size từ option
             }
 
             return completeItem;
@@ -311,45 +361,32 @@ router.get('/orders/user/details', authenticateToken, async (req, res) => {
         // Chuẩn bị thông tin chi tiết của các sản phẩm trong đơn hàng
         const completeOrderItems = await Promise.all(orderItems.map(async (item) => {
             let completeItem = {
-                _id: item._id.toString(),
-                id_product_variant: item.id_product_variant,
+                id: item._id.toString(),
+                id_product: item.option.id_product,
                 category: item.category,
                 quantity: item.quantity,
                 ingredient: "",
                 weight: "",
                 size: "",
-                color: ""
+                color: "",
+                name: item.option.name,  // Lấy name từ option
+                price: item.option.price,  // Lấy price từ option
+                image: ""
             };
 
-            // Lấy thông tin sản phẩm dựa trên category
-            if (item.category === "pets") {
-                const petInfo = await db.collection("pets").findOne({ _id: item.id_product_variant });
-                const productInfo = await db.collection("products").findOne({ _id: petInfo.id_product });
-                if (petInfo && productInfo) {
-                    completeItem.name = productInfo.name;
-                    completeItem.price = petInfo.price;
-                    completeItem.image = productInfo.image;
-                }
-            } else if (item.category === "foods") {
-                const foodInfo = await db.collection("foods").findOne({ _id: item.id_product_variant });
-                const productInfo = await db.collection("products").findOne({ _id: foodInfo.id_product });
-                if (productInfo && foodInfo) {
-                    completeItem.name = productInfo.name;
-                    completeItem.price = foodInfo.price;
-                    completeItem.image = productInfo.image;
-                    completeItem.ingredient = foodInfo.ingredient;
-                    completeItem.weight = foodInfo.weight;
-                }
+            // Lấy thông tin sản phẩm từ bảng "products" dựa trên id_product
+            const product = await db.collection("products").findOne({ _id: item.option.id_product });
+
+            if (product) {
+                completeItem.image = product.image;  // Lấy image từ sản phẩm
+            }
+            // Dựa trên category, lấy thêm các thông tin khác từ option
+            if (item.category === "foods") {
+                completeItem.ingredient = item.option.ingredient;  // Lấy ingredient từ option
+                completeItem.weight = item.option.weight;  // Lấy weight từ option 
             } else if (item.category === "supplies") {
-                const suppliesInfo = await db.collection("supplies").findOne({ _id: item.id_product_variant });
-                const productInfo = await db.collection("products").findOne({ _id: suppliesInfo.id_product });
-                if (productInfo && suppliesInfo) {
-                    completeItem.name = productInfo.name;
-                    completeItem.image = productInfo.image;
-                    completeItem.price = suppliesInfo.price;
-                    completeItem.size = suppliesInfo.size;
-                    completeItem.color = suppliesInfo.color;
-                }
+                completeItem.color = item.option.color;  // Lấy color từ option
+                completeItem.size = item.option.size;  // Lấy size từ option
             }
 
             return completeItem;
@@ -357,8 +394,8 @@ router.get('/orders/user/details', authenticateToken, async (req, res) => {
 
         // Thêm danh sách sản phẩm vào thông tin đơn hàng
         const orderInfo = {
-            _id: order._id,
-            date: order.date,
+            id: order._id,
+            date_created: order.date,
             status: order.status,
             subtotal_price: order.subtotal_price,
             shipping_price: order.shipping_price,
@@ -384,5 +421,7 @@ router.get('/orders/user/details', authenticateToken, async (req, res) => {
         return res.status(500).json({ message: 'Lỗi server khi lấy thông tin đơn hàng và sản phẩm' });
     }
 });
+
+
 
 module.exports = router;

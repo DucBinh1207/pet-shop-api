@@ -13,7 +13,7 @@ router.get('/voucher/apply/:code', authenticateToken, async (req, res) => {
     console.log(code);
 
     if (!code) {
-        return res.status(400).json({ message: 'Voucher code is required' }); // Nếu không có mã
+        return res.status(400).json(); // Nếu không có mã
     }
 
     try {
@@ -21,11 +21,11 @@ router.get('/voucher/apply/:code', authenticateToken, async (req, res) => {
         const db = client.db("PBL6"); // Kết nối tới MongoDB
         const voucherCollection = db.collection('vouchers'); // Truy cập collection 'vouchers'
 
-        // Tìm voucher theo code và status
-        const voucher = await voucherCollection.findOne({ code: code, status: 1 });
+        // Tìm voucher theo code, status và quantity > 0
+        const voucher = await voucherCollection.findOne({ code: code, status: 1, quantity: { $gt: 0 } });
 
         if (!voucher) {
-            return res.status(404).json({ message: 'Voucher không hợp lệ hoặc hết hạn' }); // Nếu không tìm thấy hoặc hết hạn
+            return res.status(400).json(); // Nếu không tìm thấy hoặc hết hạn hoặc hết số lượng
         }
 
         // Nếu voucher hợp lệ, trả về thông tin voucher
@@ -40,5 +40,6 @@ router.get('/voucher/apply/:code', authenticateToken, async (req, res) => {
         return res.status(500).json({ message: 'Lỗi server', error });
     }
 });
+
 
 module.exports = router;

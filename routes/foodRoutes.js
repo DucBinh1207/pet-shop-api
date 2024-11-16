@@ -10,8 +10,8 @@ router.get('/products/foods', async (req, res) => {
     const foodsCollection = database.collection('foods');
 
     // Query parameters
-    const ingredient = req.query.ingredient?.toLowerCase() || 'all'; // Default to 'all'
-    const categories = req.query.category ? req.query.category.split(',').map(c => c.toLowerCase()) : []; 
+    const ingredient = req.query.ingredient?.toLowerCase() || 'all';
+    const categories = req.query.category ? req.query.category.split(',').map(c => c.toLowerCase()) : [];
     const weight = parseInt(req.query.weight) || null;
     const sortBy = req.query.sortBy || 'default';
     const minPrice = parseFloat(req.query.minPrice) || 0;
@@ -19,92 +19,91 @@ router.get('/products/foods', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
-    // Filters
-    let filters = {
-      'foods.price': { $gte: minPrice, $lte: maxPrice },
+    // Build filters for foods
+    let foodFilters = {
+      status: 1, // Ensure only foods with status = 1
+      price: { $gte: minPrice, $lte: maxPrice },
     };
 
-    // Add ingredient filter if provided
     if (ingredient !== 'all') {
-      filters['foods.ingredient'] = { $regex: new RegExp(ingredient, 'i') };
+      foodFilters['ingredient'] = { $regex: new RegExp(ingredient, 'i') };
     }
 
-    // Add category filter if multiple categories are provided
     if (categories.length > 0) {
-      filters['foods.category'] = { $in: categories.map(c => new RegExp(`^${c}$`, 'i')) };
+      foodFilters['category'] = { $in: categories.map(c => new RegExp(`^${c}$`, 'i')) };
     }
 
-    // Add weight filter if provided
     if (weight) {
-      filters['foods.weight'] = { $lte: weight };
+      foodFilters['weight'] = { $lte: weight };
     }
 
-    // Aggregation pipeline
-    const pipeline = [
-      {
-        // Step 1: Lookup foods collection to combine with product
-        $lookup: {
-          from: 'foods',
-          localField: '_id',
-          foreignField: 'id_product',
-          as: 'foods',
-        },
-      },
-      {
-        // Unwind the 'foods' array to avoid nesting
-        $unwind: '$foods',
-      },
-      {
-        // Step 2: Match with the provided filters
-        $match: filters,
-      },
-      {
-        // Step 3: Group by product, collecting all variations into an array
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          image: { $first: '$image' },
-          status: { $first: '$status' },
-          date_created: { $first: '$date_created' },
-          rating: { $first: '$rating' },
-          category: { $first: '$category' },
-          variations_foods: { $push: '$foods' },
-          min_price: { $min: '$foods.price' }
-        }
-      },
-      {
-        // Step 4: Sort based on the sortBy parameter
-        $sort: (() => {
-          switch (sortBy) {
-            case 'rating':
-              return { rating: -1 };
-            case 'latest':
-              return { date_created: -1 };
-            case 'price':
-              return { min_Price: 1 };
-            case 'price-desc':
-              return { min_price: -1 };
-            default:
-              return { date_created: -1 };
-          }
-        })(),
-      },
-      {
-        // Step 5: Pagination
-        $skip: (page - 1) * limit,
-      },
-      {
-        $limit: limit,
-      }
-    ];
+    // Get filtered foods
+    const foods = await foodsCollection.find(foodFilters).toArray();
 
-    // Execute the aggregation
-    const fullFoods = await productsCollection.aggregate(pipeline).toArray();
+    // Group foods by product ID
+    const productIds = [...new Set(foods.map(food => food.id_product))];
+
+    // Build filters for products
+    const productFilters = {
+      _id: { $in: productIds },
+      status: 1, // Ensure only products with status = 1
+    };
+
+    // Count total products for pagination
+    const totalProducts = await productsCollection.countDocuments(productFilters);
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    // Fetch products with pagination
+    const products = await productsCollection
+      .find(productFilters)
+      .sort(
+        sortBy === 'rating'
+          ? { rating: -1 }
+          : sortBy === 'latest'
+            ? { date_created: -1 }
+            : sortBy === 'price'
+              ? { price: 1 }
+              : sortBy === 'price-desc'
+                ? { price: -1 }
+                : { date_created: -1 }
+      )
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .toArray();
+
+    // Combine products with their foods
+    const fullProducts = products.map(product => {
+      const productFoods = foods.filter(food =>
+        food.id_product.toString() === product._id.toString()
+      );
+
+      return {
+        id: product._id,
+        name: product.name,
+        description: product.description,
+        image: product.image,
+        date_created: product.date_created,
+        rating: product.rating,
+        category: product.category,
+        pet_type: productFoods[0]?.pet_type,
+        nutrition_info: productFoods[0]?.nutrition_info,
+        expire_date: productFoods[0]?.expire_date,
+        brand: productFoods[0]?.brand,
+        variations_foods: productFoods.map(food => ({
+          product_variant_id: food._id,
+          ingredient: food.ingredient,
+          weight: food.weight,
+          price: food.price,
+          quantity: food.quantity,
+          date_created: food.date_created,
+        }))
+      };
+    });
 
     res.json({
-      products: fullFoods,
+      products: fullProducts,
       currentPage: page,
+      totalPages,
       limit,
     });
   } catch (err) {
@@ -114,5 +113,6 @@ router.get('/products/foods', async (req, res) => {
     await client.close();
   }
 });
+
 
 module.exports = router;
