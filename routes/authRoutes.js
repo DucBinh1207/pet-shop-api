@@ -39,7 +39,7 @@ router.post("/login", async (req, res) => {
       const user = result.user;
 
       // Generate access and refresh tokens
-      const accessToken = generateToken(user._id, isRememberMe);
+      const accessToken = generateToken(user._id, isRememberMe, user.id_role);
 
       // Trả về phản hồi với access token và thông tin người dùng
       res.status(200).json({
