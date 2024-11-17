@@ -193,7 +193,7 @@ router.put('/user/avatar', authenticateToken, upload.single('image'), async (req
         const updateResult = await updateAvatarUser(userId, imagePath);
 
         if (updateResult.success) {
-            // Trả về kết quả thành công với URL ảnh mới
+            // Trả về kết quả thành công
             return res.status(200).json();
         } else {
             return res.status(500).json({ message: updateResult.message });

@@ -12,6 +12,7 @@ const voucherRoutes = require("./routes/voucherRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminProductRoutes = require("./admin/productRoutes");
+const adminUserRoutes = require("./admin/userRoutes");
 
 const cors = require("cors");
 
@@ -82,6 +83,7 @@ app.use("/api", voucherRoutes);
 app.use("/api", paymentRoutes);
 app.use("/api", userRoutes);
 app.use("/api", adminProductRoutes);
+app.use("/api", adminUserRoutes);
 
 app.use(express.static("public"));
 

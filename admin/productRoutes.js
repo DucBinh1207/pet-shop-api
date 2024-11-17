@@ -315,7 +315,7 @@ router.put('/admin/products/update', authenticateToken, upload.none(), async (re
             return res.status(400).json({ message: 'Invalid nameTag value.' });
     }
 });
-// List sp
+// List sp (chưa code xong)
 router.get('/admin/products/get', authenticateToken, upload.single('image'), async (req, res) => {
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập

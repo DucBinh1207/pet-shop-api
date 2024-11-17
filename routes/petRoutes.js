@@ -29,7 +29,14 @@ router.get('/products/pets', async (req, res) => {
     filters['price'] = { $gte: minPrice, $lte: maxPrice };
 
     // Get filtered pets
-    const pets = await petsCollection.find(filters).toArray();
+    let pets;
+    if (sortBy === 'price') {
+      pets = await petsCollection.find(filters).sort({ price: 1 }).toArray();
+    } else if (sortBy === 'price-desc') {
+      pets = await petsCollection.find(filters).sort({ price: -1 }).toArray();
+    } else {
+      pets = await petsCollection.find(filters).toArray();
+    }
 
     // Group pets by product ID
     const productIds = [...new Set(pets.map(pet => pet.id_product))];
@@ -37,12 +44,12 @@ router.get('/products/pets', async (req, res) => {
     // Get products matching the filtered pets with status = 1
     const totalProducts = await productsCollection.countDocuments({
       _id: { $in: productIds },
-      status: 1 // Only fetch products with status = 1
+      status: 1
     });
     const totalPages = Math.ceil(totalProducts / limit);
 
     // Fetch products with pagination and status = 1
-    const products = await productsCollection
+    let products = await productsCollection
       .find({ 
         _id: { $in: productIds }, 
         status: 1 
@@ -52,10 +59,6 @@ router.get('/products/pets', async (req, res) => {
           ? { rating: -1 }
           : sortBy === 'latest'
           ? { date_created: -1 }
-          : sortBy === 'price'
-          ? { price: 1 }
-          : sortBy === 'price-desc'
-          ? { price: -1 }
           : { date_created: -1 }
       )
       .skip((page - 1) * limit)
@@ -63,7 +66,7 @@ router.get('/products/pets', async (req, res) => {
       .toArray();
 
     // Combine products with their pets
-    const fullProducts = products.map(product => {
+    let fullProducts = products.map(product => {
       const productPets = pets.filter(pet => 
         pet.id_product.toString() === product._id.toString()
       );
@@ -95,6 +98,15 @@ router.get('/products/pets', async (req, res) => {
         }))
       };
     });
+
+    // Sort by minimum pet price if needed
+    if (sortBy === 'price' || sortBy === 'price-desc') {
+      fullProducts = fullProducts.sort((a, b) => {
+        const minPriceA = Math.min(...a.variations_pets.map(pet => pet.price));
+        const minPriceB = Math.min(...b.variations_pets.map(pet => pet.price));
+        return sortBy === 'price' ? minPriceA - minPriceB : minPriceB - minPriceA;
+      });
+    }
 
     res.json({
       products: fullProducts,

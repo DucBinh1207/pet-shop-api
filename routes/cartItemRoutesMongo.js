@@ -15,18 +15,18 @@ const {
 
 // Route để thêm sản phẩm vào giỏ hàng
 router.post('/cartItem/add', authenticateToken, async (req, res) => {
-    const { id_product_variant, category, quantity } = req.body;
+    const { product_variant_id, category, quantity } = req.body;
     const userId = req.user.userId;  // Lấy id_user từ token sau khi xác thực
     console.log(req.body);
     try {
         // Kiểm tra tính hợp lệ của sản phẩm
-        const productCheck = await checkValidProduct(id_product_variant, category);
+        const productCheck = await checkValidProduct(product_variant_id, category);
         if (!productCheck.success) {
             console.log("SP hết hàng hoặc ko còn tồn tại");
             return res.status(400).json();
         }
 
-        const productCheckQuantity = await checkProductStockForCart(id_product_variant, category, quantity);
+        const productCheckQuantity = await checkProductStockForCart(product_variant_id, category, quantity);
         if (!productCheckQuantity.success) {
             console.log("SP ko đủ hàng");
             return res.status(400).json();
@@ -39,7 +39,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
         // Kiểm tra xem đã có sản phẩm với cùng 3 tham số (userId, id_product_variant, category) trong giỏ hàng hay chưa
         const existingItem = await cartCollection.findOne({
             id_user: userId,
-            id_product_variant,
+            id_product_variant: product_variant_id,
             category
         });
 
@@ -58,7 +58,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
             const newItem = {
                 _id: Date.now().toString(),
                 id_user: userId, // Lưu ObjectId của user
-                id_product_variant,
+                id_product_variant: product_variant_id,
                 category,
                 quantity: quantity.toString(),
                 created_at: new Date() // Thêm trường thời gian tạo
