@@ -178,7 +178,7 @@ router.put('/user/update', authenticateToken, async (req, res) => {
     }
 });
 // API cho web để update hoặc create avatar
-router.post('/user/avatar', authenticateToken, upload.single('image'), async (req, res) => {
+router.put('/user/avatar', authenticateToken, upload.single('image'), async (req, res) => {
     const userId = req.user.userId; // Lấy id từ token
 
     if (!req.file) {

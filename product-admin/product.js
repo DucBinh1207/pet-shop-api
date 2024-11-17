@@ -34,7 +34,7 @@ async function addPet(name, description, imagePath,
             name: name,
             description: description,
             image: imageUrl, // Sử dụng URL từ Cloudinary
-            rating: 1,
+            rating: 5,
             date_created: new Date(),
             status: 1,
         };
@@ -53,7 +53,7 @@ async function addPet(name, description, imagePath,
             mother: mother,
             type: type,
             deworming: deworming,
-            vaccine: vaccine,
+            vaccine: parseInt(vaccine, 10),
             breed: breed,
             breed_origin: breed_origin === 'true', // Chuyển breed_origin thành boolean
             trait: trait,
@@ -94,9 +94,9 @@ async function addFood(name, description, imagePath, pet_type, nutrition_info, e
             name: name,
             description: description,
             image: imageUrl,
-            status: 1,
+            rating: 5,
             date_created: new Date(),
-            rating: 1
+            status: 1,
 
         };
         // Thêm sản phẩm vào 'products'
@@ -154,16 +154,16 @@ async function addSupplies(name, description, imagePath, material, brand, type, 
         // Sau khi tải ảnh thành công, lưu URL của ảnh
         const imageUrl = uploadResult.secure_url;
 
-        // Đầu tiên, lưu thông tin của sản phẩm 'food' chính
+        // Đầu tiên, lưu thông tin của sản phẩm 'supp' chính
         const supplyDoc = {
             _id: productSupplies_id,
             category: "supplies",
             name: name,
             description: description,
             image: imageUrl,
-            status: 1,
+            rating: 5,
             date_created: new Date(),
-            rating: 1
+            status: 1,
 
         };
         // Thêm sản phẩm vào 'products'
@@ -204,7 +204,7 @@ async function addSupplies(name, description, imagePath, material, brand, type, 
     }
 }
 
-async function updatePet(_id, name, description, imagePath,
+async function updatePet(_id, name, description,
     price, gender, health, father, mother, type, deworming,
     vaccine, breed, breed_origin, trait, date_of_birth, quantity) {
     try {
@@ -217,44 +217,15 @@ async function updatePet(_id, name, description, imagePath,
         if (!productPet) {
             return { success: false, message: "Product not found." };
         }
-        if (imagePath == null) {
-            // Trường hợp không thay đổi ảnh
-            const updateProductPet = {
-                name: name,
-                description: description,
-            };
-            // Cập nhật bản ghi trong collection products
-            await productsCollection.updateOne({ _id: _id }, { $set: updateProductPet });
-            console.log("Đã thay đổi pet product ko có ảnh");
-        } else {
-            // Trường hợp có thay đổi ảnh
-            const oldImageURL = productPet.image;
-            // Tách public_id từ link ảnh
-            const publicId = oldImageURL.split('/').slice(-2).join('/').replace(/\.[^/.]+$/, "");
-            // Xóa ảnh trên Cloudinary dựa vào public_id
-            cloudinary.uploader.destroy(publicId, (error, result) => {
-                if (error) {
-                    console.error("Failed to delete image on Cloudinary:", error);
-                } else {
-                    console.log("Image deleted on Cloudinary:", result);
-                }
-            });
-            // Tải ảnh mới lên Cloudinary
-            const uploadResult = await cloudinary.uploader.upload(imagePath, {
-                folder: "pets" // Đặt thư mục trên Cloudinary nếu muốn
-            });
-            // Sau khi tải ảnh thành công, lưu URL của ảnh
-            const newImageUrl = uploadResult.secure_url;
-            // Cập nhật thông tin 
-            const updateProductPet = {
-                name: name,
-                description: description,
-                image: newImageUrl, // URL ảnh mới hoặc ảnh cũ nếu không có thay đổi
-            };
-            // Cập nhật bản ghi trong collection products
-            await productsCollection.updateOne({ _id: _id }, { $set: updateProductPet });
-            console.log("Đã thay đổi pet product có ảnh");
-        }
+        // Cập nhật thông tin 
+        const updateProductPet = {
+            name: name,
+            description: description,
+        };
+        // Cập nhật bản ghi trong collection products
+        await productsCollection.updateOne({ _id: _id }, { $set: updateProductPet });
+        console.log("Đã thay đổi pet product");
+
         const updatePet = {
             price: parseInt(price, 10),
             gender: gender === 'true',
@@ -270,6 +241,7 @@ async function updatePet(_id, name, description, imagePath,
             date_of_birth: new Date(date_of_birth),
             quantity: parseInt(quantity, 10),
         };
+
         // Cập nhật bản ghi trong collection pets
         await petsCollection.updateOne({ id_product: _id }, { $set: updatePet });
         console.log("Đã update pet");
@@ -280,64 +252,185 @@ async function updatePet(_id, name, description, imagePath,
     }
 }
 
-async function updateFood(_id, name, description, imagePath, pet_type, nutrition_info, expire_date, brand, variations_food) {
+async function updateFood(_id, name, description, pet_type, nutrition_info, expire_date, brand, variations_food) {
     try {
         await client.connect();
         const database = client.db("PBL6");
         const productsCollection = database.collection("products");
         const foodsCollection = database.collection("foods");
 
+        // Kiểm tra sản phẩm có tồn tại không
         const productFood = await productsCollection.findOne({ _id: _id });
         if (!productFood) {
             return { success: false, message: "Product not found." };
         }
-        if (imagePath == null) {
-            // Trường hợp không thay đổi ảnh
-            const updateProductFood = {
-                name: name,
-                description: description,
-            };
-            // Cập nhật bản ghi trong collection products
-            await productsCollection.updateOne({ _id: _id }, { $set: updateProductFood });
-            console.log("Đã thay đổi food product ko có ảnh");
-        } else {
-            // Trường hợp có thay đổi ảnh
-            const oldImageURL = productFood.image;
-            // Tách public_id từ link ảnh
-            const publicId = oldImageURL.split('/').slice(-2).join('/').replace(/\.[^/.]+$/, "");
-            // Xóa ảnh trên Cloudinary dựa vào public_id
-            cloudinary.uploader.destroy(publicId, (error, result) => {
-                if (error) {
-                    console.error("Failed to delete image on Cloudinary:", error);
-                } else {
-                    console.log("Image deleted on Cloudinary:", result);
-                }
-            });
-            // Tải ảnh mới lên Cloudinary
-            const uploadResult = await cloudinary.uploader.upload(imagePath, {
-                folder: "foods" // Đặt thư mục trên Cloudinary nếu muốn
-            });
-            // Sau khi tải ảnh thành công, lưu URL của ảnh
-            const newImageUrl = uploadResult.secure_url;
-            // Cập nhật thông tin 
-            const updateProductFood = {
-                name: name,
-                description: description,
-                image: newImageUrl, // URL ảnh mới hoặc ảnh cũ nếu không có thay đổi
-            };
-            // Cập nhật bản ghi trong collection products
-            await productsCollection.updateOne({ _id: _id }, { $set: updateProductFood });
-            console.log("Đã thay đổi food product có ảnh");
-        }
 
+        // Cập nhật thông tin sản phẩm trong collection products
+        const updateProductFood = {
+            name,
+            description,
+        };
+        await productsCollection.updateOne({ _id: _id }, { $set: updateProductFood });
+        console.log("Cập nhật thông tin food product thành công.");
+
+        // Parse variations_food nếu cần
         variations_food = typeof variations_food === 'string' ? JSON.parse(variations_food) : variations_food;
 
+        // Lấy danh sách các variants hiện có trong DB
+        const existingVariants = await foodsCollection.find({ id_product: _id, status: { $ne: 0 } }).toArray();
+
+        // Tạo map để kiểm tra variant
+        const existingVariantIds = new Set(existingVariants.map(v => v._id));
+
+        // Duyệt qua danh sách gửi xuống
+        for (const variant of variations_food) {
+            if (variant.product_variant_id === "0") {
+                // Tạo mới variant
+                const newVariant = {
+                    _id: uuidv4(),
+                    id_product: _id,
+                    ingredient: variant.ingredient,
+                    weight: variant.weight,
+                    price: parseInt(variant.price, 10),
+                    pet_type: pet_type,
+                    nutrition_info: nutrition_info,
+                    expire_date: new Date(expire_date),
+                    brand: brand,
+                    quantity: parseInt(variant.quantity, 10),
+                    date_created: new Date(),
+                    status: 1, // Mặc định active
+                };
+                await foodsCollection.insertOne(newVariant);
+                console.log("Tạo mới variant:", newVariant);
+            } else {
+                // Cập nhật variant
+                const updateData = {
+                    ingredient: variant.ingredient,
+                    weight: variant.weight,
+                    price: parseInt(variant.price, 10),
+                    pet_type: pet_type,
+                    nutrition_info: nutrition_info,
+                    expire_date: new Date(expire_date),
+                    brand: brand,
+                    quantity: parseInt(variant.quantity, 10),
+
+                };
+                await foodsCollection.updateOne(
+                    { _id: variant.product_variant_id },
+                    { $set: updateData }
+                );
+                console.log("Cập nhật variant:", variant.product_variant_id);
+
+                // Xóa khỏi map để không bị set status = 0 sau này
+                existingVariantIds.delete(variant.product_variant_id);
+            }
+        }
+
+        // Các variant không có trong danh sách gửi xuống thì set status = 0
+        for (const variantId of existingVariantIds) {
+            await foodsCollection.updateOne(
+                { _id: variantId },
+                { $set: { status: 0 } }
+            );
+            console.log("Set status = 0 cho variant:", variantId);
+        }
+
+        return { success: true };
     } catch (err) {
-        console.error("Error adding food product and variations:", err);
+        console.error("Error updating food product and variants:", err);
         return { success: false, message: "Internal server error" };
     }
 }
 
+async function updateSupplies(_id, name, description, material, brand, type, variations_supplies) {
+    try {
+        await client.connect();
+        const database = client.db("PBL6");
+        const productsCollection = database.collection("products");
+        const suppliesCollection = database.collection("supplies");
+
+        // Kiểm tra sản phẩm có tồn tại không
+        const productSupply = await productsCollection.findOne({ _id: _id });
+        if (!productSupply) {
+            return { success: false, message: "Product not found." };
+        }
+
+        // Cập nhật thông tin sản phẩm trong collection products
+        const updateProductSupply = {
+            name,
+            description,
+        };
+        await productsCollection.updateOne({ _id: _id }, { $set: updateProductSupply });
+        console.log("Cập nhật thông tin supp product thành công.");
+
+        // Parse variations_supplies nếu cần
+        variations_supplies = typeof variations_supplies === 'string' ? JSON.parse(variations_supplies) : variations_supplies;
+
+        // Lấy danh sách các variants hiện có trong DB
+        const existingVariants = await suppliesCollection.find({ id_product: _id, status: { $ne: 0 } }).toArray();
+
+        // Tạo map để kiểm tra variant
+        const existingVariantIds = new Set(existingVariants.map(v => v._id));
+
+        // Duyệt qua danh sách gửi xuống
+        for (const variant of variations_supplies) {
+            if (variant.product_variant_id === "0") {
+                // Tạo mới variant
+                const newVariant = {
+                    _id: uuidv4(),
+                    id_product: _id,
+                    color: variant.color,
+                    size: variant.size,
+                    price: parseInt(variant.price, 10),
+                    material: material,
+                    brand: brand,
+                    type: type,
+                    quantity: parseInt(variant.quantity, 10),
+                    date_created: new Date(),
+                    status: 1, // Mặc định active
+                };
+                await suppliesCollection.insertOne(newVariant);
+                console.log("Tạo mới variant:", newVariant);
+            } else {
+                // Cập nhật variant
+                const updateData = {
+                    color: variant.color,
+                    size: variant.size,
+                    price: parseInt(variant.price, 10),
+                    material: material,
+                    brand: brand,
+                    type: type,
+                    quantity: parseInt(variant.quantity, 10),
+
+                };
+                await suppliesCollection.updateOne(
+                    { _id: variant.product_variant_id },
+                    { $set: updateData }
+                );
+                console.log("Cập nhật variant:", variant.product_variant_id);
+
+                // Xóa khỏi map để không bị set status = 0 sau này
+                existingVariantIds.delete(variant.product_variant_id);
+            }
+        }
+
+        // Các variant không có trong danh sách gửi xuống thì set status = 0
+        for (const variantId of existingVariantIds) {
+            await suppliesCollection.updateOne(
+                { _id: variantId },
+                { $set: { status: 0 } }
+            );
+            console.log("Set status = 0 cho variant:", variantId);
+        }
+
+        return { success: true };
+
+
+    } catch (err) {
+        console.error("Error adding supply product and variations:", err);
+        return { success: false, message: "Internal server error" };
+    }
+}
 // Function to get pet products
 async function getPet(category, breeds, sortBy, minPrice, maxPrice, page, limit) {
     try {
@@ -445,4 +538,5 @@ module.exports = {
     addSupplies,
     updatePet,
     updateFood,
+    updateSupplies
 };
