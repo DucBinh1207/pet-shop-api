@@ -30,7 +30,7 @@ router.get('/voucher/apply/:code', authenticateToken, async (req, res) => {
 
         // Nếu voucher hợp lệ, trả về thông tin voucher
         return res.status(200).json({
-            _id: voucher._id.toString(), // Chuyển ObjectId thành string
+            id: voucher._id.toString(), // Chuyển ObjectId thành string
             code: voucher.code,
             percent: voucher.percent,
             date_created: voucher.date_created,

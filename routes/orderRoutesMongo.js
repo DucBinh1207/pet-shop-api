@@ -319,7 +319,7 @@ router.get('/orders/user/items', authenticateToken, async (req, res) => {
         const orderItems = await orderItemsCollection.find({ id_order: id_order }).toArray();
 
         if (!orderItems || orderItems.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy sản phẩm nào cho đơn hàng này' });
+            return res.status(400).json();
         }
 
         const completeOrderItems = await Promise.all(orderItems.map(async (item) => {
