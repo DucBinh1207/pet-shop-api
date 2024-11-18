@@ -10,7 +10,9 @@ const {
     checkValidProduct,
     checkProductStockForCart,
     checkProductStock,
-    checkProductAvailability
+    checkProductAvailability,
+    reserveStockForUser,
+    checkReservedStock
 } = require("../product/product");
 
 // Route để thêm sản phẩm vào giỏ hàng
@@ -25,7 +27,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
             console.log("SP hết hàng hoặc ko còn tồn tại");
             return res.status(400).json();
         }
-
+        //Check có đủ số lượng trong kho ko
         const productCheckQuantity = await checkProductStockForCart(product_variant_id, category, quantity);
         if (!productCheckQuantity.success) {
             console.log("SP ko đủ hàng");
@@ -46,7 +48,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
         if (existingItem) {
             // Nếu sản phẩm đã tồn tại trong giỏ hàng, cập nhật số lượng
             const updatedQuantity = (parseInt(existingItem.quantity, 10)
-                + parseInt(quantity, 10)).toString();
+                + parseInt(quantity, 10));
             await cartCollection.updateOne(
                 { _id: existingItem._id }, // Dựa vào _id của sản phẩm trong giỏ hàng
                 { $set: { quantity: updatedQuantity } }
@@ -60,7 +62,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
                 id_user: userId, // Lưu ObjectId của user
                 id_product_variant: product_variant_id,
                 category,
-                quantity: quantity.toString(),
+                quantity: parseInt(quantity, 10),
                 created_at: new Date() // Thêm trường thời gian tạo
             };
 
@@ -176,7 +178,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error });
     }
 });
-// Route để cập nhật giỏ hàng
+// Route để cập nhật giỏ hàng (CẦN THÊM CHECK Ở ĐÂY)
 router.put('/cartItems/update', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
     const cartItems = req.body; // Nhận danh sách cart items cần cập nhật
@@ -264,7 +266,7 @@ router.put('/cartItems/delete', authenticateToken, async (req, res) => {
 //Route check sản phẩm có hợp lệ trc khi chuyển qua thanh toán
 router.get("/cartItems/verify", authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
-    console.log({ userId });
+
     try {
         await client.connect();
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
@@ -286,6 +288,7 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
                 console.log("Sản phẩm hết hàng: ", item.id_product_variant);
                 return res.status(400).json();
             }
+
             // Nếu số lượng trong giỏ hàng lớn hơn tồn kho, điều chỉnh lại
             if (item.quantity > productCheckStock.availableQuantity) {
                 // Cập nhật lại số lượng trong giỏ hàng
@@ -293,6 +296,7 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
                     { _id: item._id },
                     { $set: { quantity: productCheckStock.availableQuantity } }
                 );
+                console.log(`Số lượng sản phẩm ${item.id_product_variant} đã được điều chỉnh.`);
                 return res.status(400).json();
             }
 
@@ -304,12 +308,83 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
             }
         }
 
+        for (const item of cartItems) {
+            let collectionName;
+
+            // Xác định collection dựa trên category
+            switch (item.category) {
+                case "pets":
+                    collectionName = "pets";
+                    break;
+                case "food":
+                    collectionName = "foods";
+                    break;
+                case "supplies":
+                    collectionName = "supplies";
+                    break;
+                default:
+                    return res.status(400).json();
+            }
+
+            // Trừ tồn kho trong collection tương ứng
+            const updatedStock = await db.collection(collectionName).updateOne(
+                { _id: item.id_product_variant },
+                { $inc: { quantity: -item.quantity } }
+            );
+
+            // Kiểm tra kết quả cập nhật
+            if (updatedStock.modifiedCount === 0) {
+                console.log(`Không thể trừ tồn kho cho sản phẩm ${item.id_product_variant} thuộc danh mục ${item.category}.`)
+                return res.status(400).json();
+            }
+        }
+
+        // Nếu kiểm tra thành công, giữ hàng trong Redis
+        const reserveStock = await reserveStockForUser(userId, cartItems);
+        if (!reserveStock.success) {
+            console.log("Lỗi giữ hàng");
+            return res.status(400).json();
+        }
+
         // Nếu tất cả đều hợp lệ, trả về thành công
         res.status(200).json();
 
     } catch (error) {
         console.error('Error loading cart items:', error); // In ra lỗi nếu có
-        res.status(500).json({ message: "Lỗi máy chủ", error });
+        res.status(500).json({
+            message: "Lỗi máy chủ"
+        });
+    }
+});
+//Route check stock (ko cần dùng)
+router.get("/cartItems/checkStock", authenticateToken, async (req, res) => {
+    const userId = req.user.userId; // Lấy id_user từ token
+    try {
+        await client.connect();
+
+        // Nếu kiểm tra thành công, giữ hàng trong Redis
+        const checkReserveStock = await checkReservedStock(userId);
+        if (!checkReserveStock.success) {
+            console.log("Lỗi giữ hàng");
+            return res.status(400).json({
+                success: false,
+                message: checkReserveStock.message,
+            });
+        }
+
+        // Nếu tất cả đều hợp lệ, trả về thành công
+        res.status(200).json({
+            success: true,
+            message: checkReserveStock.data,
+        });
+
+    } catch (error) {
+        console.error('Error loading cart items:', error); // In ra lỗi nếu có
+        res.status(500).json({
+            success: false,
+            message: "Lỗi máy chủ",
+            error,
+        });
     }
 });
 

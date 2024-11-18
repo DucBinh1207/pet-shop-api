@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const redisClient = require("../middleware/redisClient");
+const redis = redisClient.init();
 
 // Middleware để parse JSON body
 router.use(express.json());
@@ -101,6 +103,17 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
     console.log(req.body);
     console.log("id_user: " + id_user);
 
+    const cartKey = process.env.PREFIX_RESERVED_STOCK + id_user;
+    const cartKeyLater = process.env.PREFIX_RESERVED_STOCK_LATER + id_user;
+    const exists = await redis.exists(cartKey);
+    if (exists) {
+        await redis.del(cartKey);  // Xóa key cũ
+    } else {
+        console.log("Hết thời gian giữ hàng");
+        return res.status(400).json();
+    }
+    await redis.del(cartKeyLater);
+
     const {
         name,
         telephone_number,
@@ -132,16 +145,33 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
 
     if (missingFields.length > 0) {
         console.log("Các trường bị thiếu:", missingFields.join(', '));
-        return res.status(400).json({
-            message: 'Vui lòng nhập đầy đủ thông tin',
-            missingFields: missingFields
-        });
+        return res.status(400).json();
     }
 
     try {
         await client.connect();
         const db = client.db("PBL6"); // Kết nối tới cơ sở dữ liệu MongoDB
         const ordersCollection = db.collection('orders');
+        const vouchersCollection = db.collection('vouchers');
+
+        if (voucher_code) {
+            const voucher = await vouchersCollection.findOne({ code: voucher_code, status: 1 });
+            if (!voucher) {
+                console.log("Voucher không tồn tại");
+                return res.status(400).json();
+            }
+            if (voucher.quantity <= 0) {
+                console.log("Voucher đã hết");
+                return res.status(400).json();
+            }
+            // Trừ 1 số lượng voucher
+            await vouchersCollection.updateOne(
+                { code: voucher_code },
+                { $inc: { quantity: -1 } }
+            );
+            console.log("Đã trừ số lượng voucher");
+        }
+
         const cartItemsCollection = db.collection('cart_items');
         const orderItemsCollection = db.collection('order_items');
         const paymentsCollection = db.collection('payments');
@@ -183,7 +213,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
 
         if (cartItems.length === 0) {
             console.log("Không có sản phẩm trong giỏ hàng");
-            return res.status(400).json({ message: 'Không có sản phẩm trong giỏ hàng' });
+            return res.status(400).json();
         }
 
         // Tạo danh sách order_items từ cart_items
@@ -262,6 +292,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
 
         await paymentsCollection.insertOne(newPayment);
         console.log("Đã tạo bản ghi payment");
+
 
         // Trả về phản hồi thành công
         return res.status(201).json({ id_order: id_order.toString() });
