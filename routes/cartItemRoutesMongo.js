@@ -178,6 +178,109 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error });
     }
 });
+// Route get cart items cho mobile
+router.get("/cartItems/mobile", authenticateToken, async (req, res) => {
+    const userId = req.user.userId; // Lấy id_user từ token
+    console.log({ userId });
+    try {
+        await client.connect();
+        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
+        const productsCollection = db.collection('products'); // Collection chứa thông tin sản phẩm chung
+        const petCollection = db.collection('pets'); // Collection chứa thông tin sản phẩm loại pets
+        const foodCollection = db.collection('foods'); // Collection chứa thông tin sản phẩm loại food
+        const suppliesCollection = db.collection('supplies'); // Collection chứa thông tin sản phẩm loại supplies
+
+        // Tìm tất cả cart items của user trong MongoDB
+        const cartItems = await cartItemsCollection.find({ id_user: userId }).toArray();
+
+        // Kiểm tra nếu không có sản phẩm trong giỏ hàng
+        if (!cartItems.length) {
+            return res.status(400).json();
+        }
+
+        // Tạo một danh sách để lưu các item hoàn chỉnh
+        const completeCartItems = await Promise.all(cartItems.map(async (item) => {
+            let completeItem = {
+                id: item._id,
+                product_variant_id: item.id_product_variant,
+                category: item.category,
+                name: "",
+                quantity: parseInt(item.quantity, 10),
+                ingredient: "",
+                weight: "",
+                size: "",
+                color: "",
+                price: "",
+                image: "",
+                status: null
+            };
+
+            // Lấy thông tin từ bảng pet, food hoặc supplies dựa trên category
+            if (item.category === "pets") {
+                const petInfo = await petCollection.findOne({ _id: item.id_product_variant });
+                const productInfo = await productsCollection.findOne({ _id: petInfo.id_product });
+                if (productInfo && petInfo) {
+                    completeItem.name = productInfo.name;
+                    completeItem.price = petInfo.price;
+                    completeItem.image = productInfo.image;
+                    completeItem.status = 1;
+                }
+            } else if (item.category === "foods") {
+                const foodInfo = await foodCollection.findOne({ _id: item.id_product_variant });
+                const productInfo = await productsCollection.findOne({ _id: foodInfo.id_product });
+                if (productInfo && foodInfo) {
+                    completeItem.name = productInfo.name;
+                    completeItem.price = foodInfo.price;
+                    completeItem.image = productInfo.image;
+                    completeItem.ingredient = foodInfo.ingredient;
+                    completeItem.weight = foodInfo.weight;
+                    completeItem.status = 1;
+                }
+            } else if (item.category === "supplies") {
+                const suppliesInfo = await suppliesCollection.findOne({ _id: item.id_product_variant });
+                const productInfo = await productsCollection.findOne({ _id: suppliesInfo.id_product });
+                if (suppliesInfo && productInfo) {
+                    completeItem.name = productInfo.name;
+                    completeItem.image = productInfo.image;
+                    completeItem.price = suppliesInfo.price;
+                    completeItem.size = suppliesInfo.size;
+                    completeItem.color = suppliesInfo.color;
+                    completeItem.status = 1;
+                }
+            }
+
+            const productCheckStock = await checkProductStock(completeItem.product_variant_id, completeItem.category);
+            if (!productCheckStock.success) {
+                console.log("SP hết hàng ");
+                completeItem.status = 2;
+            } else {
+                // Nếu số lượng trong giỏ hàng lớn hơn tồn kho, điều chỉnh lại
+                if (item.quantity > productCheckStock.availableQuantity) {
+                    completeItem.quantity = productCheckStock.availableQuantity; // Điều chỉnh lại số lượng trong giỏ
+                    // Cập nhật lại số lượng trong giỏ hàng
+                    await cartItemsCollection.updateOne(
+                        { _id: item._id },
+                        { $set: { quantity: productCheckStock.availableQuantity } }
+                    );
+                }
+            }
+            const productCheckAvailability = await checkProductAvailability(completeItem.product_variant_id, completeItem.category);
+            if (!productCheckAvailability.success) {
+                console.log("SP đã bị xóa ");
+                completeItem.status = 3;
+            }
+            return completeItem; // Trả về item hoàn chỉnh
+        }));
+
+        completeCartItems.sort((a, b) => a.status - b.status);
+        // Trả về danh sách item hoàn chỉnh
+        res.status(200).json(completeCartItems);
+    } catch (error) {
+        console.error('Error loading cart items:', error); // In ra lỗi nếu có
+        res.status(500).json({ message: "Lỗi máy chủ", error });
+    }
+});
 // Route để cập nhật giỏ hàng (CẦN THÊM CHECK Ở ĐÂY)
 router.put('/cartItems/update', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
@@ -256,7 +359,7 @@ router.put('/cartItems/delete', authenticateToken, async (req, res) => {
         if (result.deletedCount > 0) {
             res.status(200).json();
         } else {
-            res.status(404).json({ message: 'Sản phẩm không tồn tại trong giỏ hàng' });
+            res.status(400).json();
         }
     } catch (error) {
         console.error('Error deleting cart item:', error); // In ra lỗi nếu có
@@ -277,7 +380,8 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
 
         // Kiểm tra nếu không có sản phẩm trong giỏ hàng
         if (!cartItems.length) {
-            return res.status(200).json();
+            console.log("Ko có sp trong giỏ")
+            return res.status(400).json();
         }
 
         // Kiểm tra từng item trong giỏ hàng
@@ -316,13 +420,14 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
                 case "pets":
                     collectionName = "pets";
                     break;
-                case "food":
+                case "foods":
                     collectionName = "foods";
                     break;
                 case "supplies":
                     collectionName = "supplies";
                     break;
                 default:
+                    console.log("Category lỗi", item.id_product_variant);
                     return res.status(400).json();
             }
 

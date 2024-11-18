@@ -129,8 +129,8 @@ async function reserveStockForUser(id_user, cartItems) {
 
 
         // Lưu vào Redis với thời gian hết hạn là 5 giây cho cartKey và 7 giây cho cartKeyLater
-        await redis.set(cartKey, cartData, { EX: 300 }); // 5 phút = 300 giây
-        await redis.set(cartKeyLater, cartData, { EX: 310 }); // 5 phút 10 giây = 310 giây
+        await redis.set(cartKey, cartData, { EX: 10 }); // 5 phút = 300 giây
+        await redis.set(cartKeyLater, cartData, { EX: 15 }); // 5 phút 10 giây = 310 giây
 
         return { success: true, message: "Stock reserved successfully." };
     } catch (err) {
@@ -178,7 +178,7 @@ async function returnStock(expiredKey, data) {
                 case "pets":
                     collectionName = "pets";
                     break;
-                case "food":
+                case "foods":
                     collectionName = "foods";
                     break;
                 case "supplies":
