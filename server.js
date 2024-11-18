@@ -13,6 +13,8 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminProductRoutes = require("./admin/productRoutes");
 const adminUserRoutes = require("./admin/userRoutes");
+const listenForExpirationEvents = require("./middleware/redisSubscriber");
+const {returnStock} = require("./product/product");
 
 const cors = require("cors");
 
@@ -91,6 +93,10 @@ app.use(express.static("public"));
 app.use((err, req, res, next) => {
   console.error(`Error occurred on route ${req.method} ${req.originalUrl}:`, err);
   res.status(500).json({ message: "Đã xảy ra lỗi trên máy chủ", error: err.message });
+});
+
+listenForExpirationEvents(async (expiredKey, data) => {
+  await returnStock(expiredKey, data);
 });
 
 app.listen(port, () => {

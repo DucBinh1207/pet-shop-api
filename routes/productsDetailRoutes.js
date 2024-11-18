@@ -41,7 +41,8 @@ router.get('/products/supplies/:id', async (req, res) => {
         color: supply.color,
         size: supply.size,
         price: supply.price,
-        quantity: supply.quantity
+        quantity: supply.quantity,
+        date_created: supply.date_created
       })),
     };
 
@@ -88,22 +89,23 @@ router.get('/products/foods/:id', async (req, res) => {
       weight: variation.weight,
       price: variation.price,
       quantity: variation.quantity,
+      date_created: variation.date_created
     }));
 
     // Tạo đối tượng response
     const responseData = {
       id: product._id,
-      category: product.category,
       name: product.name,
       description: product.description,
       image: product.image,
       date_created: product.date_created,
       rating: product.rating,
+      category: product.category,
       pet_type: food.pet_type,
       nutrition_info: food.nutrition_info,
       expire_date: food.expire_date,
       brand: food.brand,
-      variations_food: variationsFood,
+      variations_foods: variationsFood,
     };
 
     res.json(responseData); // Trả lại dữ liệu
@@ -174,7 +176,7 @@ router.get('/products/pets/:id', async (req, res) => {
       date_created: product.date_created,
       rating: product.rating,
       category: product.category,
-      variations_pet: variationsPets,
+      variations_pets: variationsPets,
     };
 
     res.json(responseData); // Trả lại dữ liệu
