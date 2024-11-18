@@ -33,8 +33,8 @@ router.get('/products/foods', async (req, res) => {
     // Filter by weight (normalize both query and DB values)
     if (weightQuery !== 'all') {
       const normalizedWeightQuery = parseInt(weightQuery.replace(/\D/g, ''), 10); // Extract numeric value from weight query
-      foodFilters['weight'] = { 
-        $regex: new RegExp(`^${normalizedWeightQuery}kg$`, 'i') 
+      foodFilters['weight'] = {
+        $regex: new RegExp(`^${normalizedWeightQuery}kg$`, 'i')
       };
     }
 
@@ -101,6 +101,7 @@ router.get('/products/foods', async (req, res) => {
         nutrition_info: sortedProductFoods[0]?.nutrition_info,
         expire_date: sortedProductFoods[0]?.expire_date,
         brand: sortedProductFoods[0]?.brand,
+        //min_price_variant: minPriceVariant,
         variations_foods: sortedProductFoods.map(food => ({
           product_variant_id: food._id,
           ingredient: food.ingredient,
@@ -109,7 +110,7 @@ router.get('/products/foods', async (req, res) => {
           quantity: food.quantity,
           date_created: food.date_created,
         })),
-        //min_price_variant: minPriceVariant, // Lưu giá thấp nhất của biến thể
+         // Lưu giá thấp nhất của biến thể
       };
     });
 
@@ -117,19 +118,19 @@ router.get('/products/foods', async (req, res) => {
     let sortedProducts;
     switch (sortBy) {
       case 'price':
-        sortedProducts = fullProducts.sort((a, b) => a.min_price_variant - b.min_price_variant); // Price ascending
+        sortedProducts = fullProducts.sort((a, b) => a.min_price_variant - b.min_price_variant); // Giá thấp nhất tăng dần
         break;
-      case 'price_desc':
-        sortedProducts = fullProducts.sort((a, b) => b.min_price_variant - a.min_price_variant); // Price descending
+      case 'price-desc':
+        sortedProducts = fullProducts.sort((a, b) => b.min_price_variant - a.min_price_variant); // Giá thấp nhất giảm dần
         break;
       case 'rating':
-        sortedProducts = fullProducts.sort((a, b) => b.rating - a.rating); // Rating descending
+        sortedProducts = fullProducts.sort((a, b) => b.rating - a.rating); // Rating giảm dần
         break;
       case 'latest':
-        sortedProducts = fullProducts.sort((a, b) => new Date(b.date_created) - new Date(a.date_created)); // Latest first
+        sortedProducts = fullProducts.sort((a, b) => new Date(b.date_created) - new Date(a.date_created)); // Mới nhất trước
         break;
       default:
-        sortedProducts = fullProducts; // No sorting
+        sortedProducts = fullProducts; // Không sắp xếp
         break;
     }
 
