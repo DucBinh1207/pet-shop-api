@@ -35,8 +35,8 @@ router.get('/products/supplies', async (req, res) => {
     if (size) {
       supplyFilters.size = { $regex: new RegExp(size, 'i') };
     }
-    if (type) {  // Lọc theo loại sản phẩm
-      supplyFilters.type = { $regex: new RegExp(type, 'i') }; 
+    if (type) {
+      supplyFilters.type = { $regex: new RegExp(type, 'i') };
     }
 
     // Find all supplies matching filters
@@ -95,6 +95,9 @@ router.get('/products/supplies', async (req, res) => {
         return (sizeOrder[sizeA] || 0) - (sizeOrder[sizeB] || 0);
       });
 
+      // Tính giá thấp nhất từ các variations
+      const lowestPrice = Math.min(...sortedSupplies.map(supply => supply.price));
+
       return {
         id: product._id, // Convert MongoDB _id to id
         name: product.name,
@@ -106,6 +109,7 @@ router.get('/products/supplies', async (req, res) => {
         material: sortedSupplies[0]?.material || null,
         brand: sortedSupplies[0]?.brand || null,
         type: sortedSupplies[0]?.type || null,
+        //lowest_price: lowestPrice,
         variations_supplies: sortedSupplies.map(supply => ({
           product_variant_id: supply._id,
           color: supply.color,
@@ -123,17 +127,11 @@ router.get('/products/supplies', async (req, res) => {
     } else if (sortBy === 'latest') {
       fullProducts.sort((a, b) => new Date(b.date_created) - new Date(a.date_created));
     } else if (sortBy === 'price') {
-      fullProducts.sort((a, b) => {
-        const minA = Math.min(...a.variations_supplies.map(v => v.price));
-        const minB = Math.min(...b.variations_supplies.map(v => v.price));
-        return minA - minB;
-      });
+      // Xếp tăng dần theo lowest_price
+      fullProducts.sort((a, b) => a.lowest_price - b.lowest_price);
     } else if (sortBy === 'price-desc') {
-      fullProducts.sort((a, b) => {
-        const minA = Math.min(...a.variations_supplies.map(v => v.price));
-        const minB = Math.min(...b.variations_supplies.map(v => v.price));
-        return minB - minA;
-      });
+      // Xếp giảm dần theo lowest_price
+      fullProducts.sort((a, b) => b.lowest_price - a.lowest_price);
     }
 
     // Pagination
@@ -153,5 +151,6 @@ router.get('/products/supplies', async (req, res) => {
     await client.close();
   }
 });
+
 
 module.exports = router;
