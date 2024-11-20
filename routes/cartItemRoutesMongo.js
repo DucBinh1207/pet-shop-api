@@ -38,10 +38,10 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
         const db = client.db("PBL6"); // Kết nối tới database "PBL6"
         const cartCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
-        // Kiểm tra xem đã có sản phẩm với cùng 3 tham số (userId, id_product_variant, category) trong giỏ hàng hay chưa
+        // Kiểm tra xem đã có sản phẩm với cùng 3 tham số (userId, product_variant_id, category) trong giỏ hàng hay chưa
         const existingItem = await cartCollection.findOne({
             id_user: userId,
-            id_product_variant: product_variant_id,
+            product_variant_id: product_variant_id,
             category
         });
 
@@ -60,7 +60,7 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
             const newItem = {
                 _id: Date.now().toString(),
                 id_user: userId, // Lưu ObjectId của user
-                id_product_variant: product_variant_id,
+                product_variant_id: product_variant_id,
                 category,
                 quantity: parseInt(quantity, 10),
                 created_at: new Date() // Thêm trường thời gian tạo
@@ -100,7 +100,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
         const completeCartItems = await Promise.all(cartItems.map(async (item) => {
             let completeItem = {
                 id: item._id,
-                product_variant_id: item.id_product_variant,
+                product_variant_id: item.product_variant_id,
                 category: item.category,
                 name: "",
                 quantity: parseInt(item.quantity, 10),
@@ -115,7 +115,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
 
             // Lấy thông tin từ bảng pet, food hoặc supplies dựa trên category
             if (item.category === "pets") {
-                const petInfo = await petCollection.findOne({ _id: item.id_product_variant });
+                const petInfo = await petCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: petInfo.id_product });
                 if (productInfo && petInfo) {
                     completeItem.name = productInfo.name;
@@ -124,7 +124,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
                     completeItem.status = 1;
                 }
             } else if (item.category === "foods") {
-                const foodInfo = await foodCollection.findOne({ _id: item.id_product_variant });
+                const foodInfo = await foodCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: foodInfo.id_product });
                 if (productInfo && foodInfo) {
                     completeItem.name = productInfo.name;
@@ -135,7 +135,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
                     completeItem.status = 1;
                 }
             } else if (item.category === "supplies") {
-                const suppliesInfo = await suppliesCollection.findOne({ _id: item.id_product_variant });
+                const suppliesInfo = await suppliesCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: suppliesInfo.id_product });
                 if (suppliesInfo && productInfo) {
                     completeItem.name = productInfo.name;
@@ -203,7 +203,7 @@ router.get("/cartItems/mobile", authenticateToken, async (req, res) => {
         const completeCartItems = await Promise.all(cartItems.map(async (item) => {
             let completeItem = {
                 id: item._id,
-                product_variant_id: item.id_product_variant,
+                product_variant_id: item.product_variant_id,
                 category: item.category,
                 name: "",
                 quantity: parseInt(item.quantity, 10),
@@ -218,7 +218,7 @@ router.get("/cartItems/mobile", authenticateToken, async (req, res) => {
 
             // Lấy thông tin từ bảng pet, food hoặc supplies dựa trên category
             if (item.category === "pets") {
-                const petInfo = await petCollection.findOne({ _id: item.id_product_variant });
+                const petInfo = await petCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: petInfo.id_product });
                 if (productInfo && petInfo) {
                     completeItem.name = productInfo.name;
@@ -227,7 +227,7 @@ router.get("/cartItems/mobile", authenticateToken, async (req, res) => {
                     completeItem.status = 1;
                 }
             } else if (item.category === "foods") {
-                const foodInfo = await foodCollection.findOne({ _id: item.id_product_variant });
+                const foodInfo = await foodCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: foodInfo.id_product });
                 if (productInfo && foodInfo) {
                     completeItem.name = productInfo.name;
@@ -238,7 +238,7 @@ router.get("/cartItems/mobile", authenticateToken, async (req, res) => {
                     completeItem.status = 1;
                 }
             } else if (item.category === "supplies") {
-                const suppliesInfo = await suppliesCollection.findOne({ _id: item.id_product_variant });
+                const suppliesInfo = await suppliesCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: suppliesInfo.id_product });
                 if (suppliesInfo && productInfo) {
                     completeItem.name = productInfo.name;
@@ -281,7 +281,7 @@ router.get("/cartItems/mobile", authenticateToken, async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error });
     }
 });
-// Route để cập nhật giỏ hàng (CẦN THÊM CHECK Ở ĐÂY)
+// Route để cập nhật giỏ hàng
 router.put('/cartItems/update', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
     const cartItems = req.body; // Nhận danh sách cart items cần cập nhật
@@ -297,7 +297,7 @@ router.put('/cartItems/update', authenticateToken, async (req, res) => {
 
         // Lặp qua từng cart item để cập nhật
         for (const item of cartItems) {
-            const { id, id_product_variant, category, quantity } = item;
+            const { id, product_variant_id, category, quantity } = item;
             console.log(id);
 
             // Kiểm tra xem có item tương ứng trong cart_items không
@@ -319,7 +319,7 @@ router.put('/cartItems/update', authenticateToken, async (req, res) => {
                 const newItem = {
                     _id: Date.now().toString(),  // Tạo ID duy nhất cho cart item
                     id_user: userId,
-                    id_product_variant,
+                    product_variant_id,
                     category,
                     quantity: quantity
                 };
@@ -387,9 +387,9 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
         // Kiểm tra từng item trong giỏ hàng
         for (const item of cartItems) {
             // Kiểm tra số lượng tồn kho
-            const productCheckStock = await checkProductStock(item.id_product_variant, item.category);
+            const productCheckStock = await checkProductStock(item.product_variant_id, item.category);
             if (!productCheckStock.success) {
-                console.log("Sản phẩm hết hàng: ", item.id_product_variant);
+                console.log("Sản phẩm hết hàng: ", item.product_variant_id);
                 return res.status(400).json();
             }
 
@@ -400,14 +400,14 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
                     { _id: item._id },
                     { $set: { quantity: productCheckStock.availableQuantity } }
                 );
-                console.log(`Số lượng sản phẩm ${item.id_product_variant} đã được điều chỉnh.`);
+                console.log(`Số lượng sản phẩm ${item.product_variant_id} đã được điều chỉnh.`);
                 return res.status(400).json();
             }
 
             // Kiểm tra tính khả dụng của sản phẩm
-            const productCheckAvailability = await checkProductAvailability(item.id_product_variant, item.category);
+            const productCheckAvailability = await checkProductAvailability(item.product_variant_id, item.category);
             if (!productCheckAvailability.success) {
-                console.log("Sản phẩm đã bị xóa: ", item.id_product_variant);
+                console.log("Sản phẩm đã bị xóa: ", item.product_variant_id);
                 return res.status(400).json();
             }
         }
@@ -427,19 +427,19 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
                     collectionName = "supplies";
                     break;
                 default:
-                    console.log("Category lỗi", item.id_product_variant);
+                    console.log("Category lỗi", item.product_variant_id);
                     return res.status(400).json();
             }
 
             // Trừ tồn kho trong collection tương ứng
             const updatedStock = await db.collection(collectionName).updateOne(
-                { _id: item.id_product_variant },
+                { _id: item.product_variant_id },
                 { $inc: { quantity: -item.quantity } }
             );
 
             // Kiểm tra kết quả cập nhật
             if (updatedStock.modifiedCount === 0) {
-                console.log(`Không thể trừ tồn kho cho sản phẩm ${item.id_product_variant} thuộc danh mục ${item.category}.`)
+                console.log(`Không thể trừ tồn kho cho sản phẩm ${item.product_variant_id} thuộc danh mục ${item.category}.`)
                 return res.status(400).json();
             }
         }

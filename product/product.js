@@ -129,8 +129,8 @@ async function reserveStockForUser(id_user, cartItems) {
 
 
         // Lưu vào Redis với thời gian hết hạn là 5 giây cho cartKey và 7 giây cho cartKeyLater
-        await redis.set(cartKey, cartData, { EX: 10 }); // 5 phút = 300 giây
-        await redis.set(cartKeyLater, cartData, { EX: 15 }); // 5 phút 10 giây = 310 giây
+        await redis.set(cartKey, cartData, { EX: 300 }); // 5 phút = 300 giây
+        await redis.set(cartKeyLater, cartData, { EX: 310 }); // 5 phút 10 giây = 310 giây
 
         return { success: true, message: "Stock reserved successfully." };
     } catch (err) {
@@ -166,11 +166,25 @@ async function checkReservedStock(id_user) {
 //Trả hàng khi hết thời gian
 async function returnStock(expiredKey, data) {
     try {
+        // Nếu data là null, xóa key Redis và trả về
         if (data === null) {
             await redis.del(expiredKey);
             return { success: true, message: "Data null" };
         }
-        const reservedItems = JSON.parse(data);
+        let reservedItems = JSON.parse(data);
+
+        if (!Array.isArray(reservedItems)) {
+            // Nếu là đối tượng, chuyển đối tượng đó thành mảng với cấu trúc { product_variant_id, category, quantity }
+            if (typeof reservedItems === 'object') {
+                reservedItems = [reservedItems]; // Chuyển đối tượng thành mảng với 1 phần tử là đối tượng đó
+            } else {
+                console.log("Dữ liệu không hợp lệ:", reservedItems);
+                return res.status(400).json();
+            }
+        }
+        // Nếu data là một đối tượng, chuyển nó thành mảng để xử lý chung
+        // const reservedItems = Array.isArray(data) ? data : [data];
+
         for (const item of reservedItems) {
             let collectionName;
 
@@ -188,14 +202,18 @@ async function returnStock(expiredKey, data) {
                     console.log(`Danh mục không hợp lệ: ${item.category}`);
                     continue;
             }
-
+            const numericQuantity = Number(item.quantity);
+            if (isNaN(numericQuantity)) {
+                console.log("Quantity không phải là số hợp lệ:", quantity);
+            }
             // Trả lại số lượng vào tồn kho
             await client.db("PBL6").collection(collectionName).updateOne(
-                { _id: item.id_product_variant },
-                { $inc: { quantity: item.quantity } }
+                { _id: item.product_variant_id },
+                { $inc: { quantity: numericQuantity } }
             );
-            console.log(`Đã trả lại ${item.quantity} cho sản phẩm ${item.id_product_variant}`);
+            console.log(`Đã trả lại ${item.quantity} cho sản phẩm ${item.product_variant_id}`);
         }
+
         // Xóa key Redis (nếu chưa bị xóa bởi TTL)
         await redis.del(expiredKey);
 
@@ -203,6 +221,7 @@ async function returnStock(expiredKey, data) {
         console.error("Lỗi khi trả lại tồn kho:", err);
     }
 }
+
 
 module.exports = {
     checkValidProduct,
