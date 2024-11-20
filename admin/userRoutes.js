@@ -5,6 +5,7 @@ const router = express.Router();
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { client } = require("../db");
 const { v4: uuidv4 } = require('uuid');
+const bcrypt = require("bcrypt");
 
 cloudinary.config({
     cloud_name: process.env.CLOUD_NAME,
@@ -27,8 +28,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-const bcrypt = require("bcrypt");
-const { v4: uidv4 } = require("uuid"); // Giả định bạn sử dụng uuid để tạo id
+
 
 router.post('/admin/users/create', authenticateToken, upload.single('image'), async (req, res) => {
     const id_role = req.user.id_role;

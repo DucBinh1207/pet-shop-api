@@ -1,9 +1,6 @@
 const express = require("express");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const authRoutes = require("./routes/authRoutes");
-const petRoutes = require("./routes/petRoutes");
-const foodRoutes = require("./routes/foodRoutes");
-const supplyRoutes = require("./routes/supplyRoutes");
 const cartRoutes = require("./routes/cartItemRoutesMongo");
 const orderRoutes = require("./routes/orderRoutesMongo");
 const detailRoutes = require('./routes/productsDetailRoutes');
@@ -13,6 +10,9 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminProductRoutes = require("./admin/productRoutes");
 const adminUserRoutes = require("./admin/userRoutes");
+const productRoutes = require("./routes/productRoutes");
+
+
 const listenForExpirationEvents = require("./middleware/redisSubscriber");
 const {returnStock} = require("./product/product");
 
@@ -74,16 +74,14 @@ app.get('/pingMongo', async (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-app.use("/api", petRoutes);
-app.use("/api", foodRoutes);
-app.use("/api", supplyRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
 app.use('/api', detailRoutes);
-app.use('/api/comment', commentRoutes);
+app.use('/api', commentRoutes);
 app.use("/api", voucherRoutes);
 app.use("/api", paymentRoutes);
 app.use("/api", userRoutes);
+app.use("/api", productRoutes);
 app.use("/api", adminProductRoutes);
 app.use("/api", adminUserRoutes);
 
