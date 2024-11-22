@@ -37,6 +37,7 @@ async function addPet(name, description, imagePath,
             rating: 5,
             date_created: new Date(),
             status: 1,
+            sold: 0
         };
 
         // Thêm sản phẩm vào MongoDB
@@ -97,6 +98,7 @@ async function addFood(name, description, imagePath, pet_type, nutrition_info, e
             rating: 5,
             date_created: new Date(),
             status: 1,
+            sold: 0
 
         };
         // Thêm sản phẩm vào 'products'
@@ -164,6 +166,7 @@ async function addSupplies(name, description, imagePath, material, brand, type, 
             rating: 5,
             date_created: new Date(),
             status: 1,
+            sold: 0
 
         };
         // Thêm sản phẩm vào 'products'

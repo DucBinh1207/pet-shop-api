@@ -520,6 +520,34 @@ router.get('/products/search', async (req, res) => {
         await client.close();
     }
 });
+// Best sellers
+router.get('/products/bestSellers', async (req, res) => {
+    const amount = parseInt(req.query.amount); // Chuyển đổi giá trị amount sang số nguyên
+
+    if (!amount || amount <= 0) {
+        return res.status(400).json({ message: 'Invalid amount parameter' });
+    }
+
+    try {
+        await client.connect();
+        const database = client.db('PBL6');
+        const productsCollection = database.collection('products');
+
+        // Lấy các sản phẩm có sold cao nhất
+        const bestSellers = await productsCollection
+            .find({})
+            .sort({ sold: -1 }) // Sắp xếp giảm dần theo trường sold
+            .limit(amount) // Giới hạn số lượng kết quả
+            .toArray();
+
+        res.json({ bestSellers });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    } finally {
+        await client.close();
+    }
+});
 
 
 
