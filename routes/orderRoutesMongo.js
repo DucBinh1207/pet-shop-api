@@ -119,7 +119,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
 
             if (!products || products.length === 0) {
                 console.log("Không có sản phẩm nào trong giỏ hàng");
-                return res.status(400).json();
+                return res.status(400).json({message: "Không có sản phẩm nào trong giỏ hàng"});
             }
             console.log("Dữ liệu giỏ hàng:", products);
 
@@ -127,7 +127,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
             await redis.del(cartKey);
         } else {
             console.log("Hết thời gian giữ hàng");
-            return res.status(400).json();
+            return res.status(400).json({message: "Hết thời gian giữ hàng"});
         }
 
         // Xóa dữ liệu giữ hàng tạm (cartKeyLater)
@@ -231,7 +231,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
                 products = [products]; // Chuyển đối tượng thành mảng với 1 phần tử là đối tượng đó
             } else {
                 console.log("Dữ liệu không hợp lệ:", products);
-                return res.status(400).json();
+                return res.status(400).json({message: "Dữ liệu không hợp lệ"});
             }
         }
         console.log("Dữ liệu giỏ hàng sau khi chuyển:", products);

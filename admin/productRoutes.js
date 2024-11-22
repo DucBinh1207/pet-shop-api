@@ -739,9 +739,12 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
                 fullProducts; // Không sắp xếp
                 break;
         }
-
+        // Pagination
+        const startIndex = (page - 1) * limit;
+        const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
+        
         res.json({
-            products: fullProducts,
+            products: paginatedProducts,
             currentPage: page,
             totalPages,
             limit,

@@ -25,13 +25,13 @@ router.post('/cartItem/add', authenticateToken, async (req, res) => {
         const productCheck = await checkValidProduct(product_variant_id, category);
         if (!productCheck.success) {
             console.log("SP hết hàng hoặc ko còn tồn tại");
-            return res.status(400).json();
+            return res.status(400).json({message: "Sản phẩm đã hết hàng hoặc không còn tồn tại"});
         }
         //Check có đủ số lượng trong kho ko
         const productCheckQuantity = await checkProductStockForCart(product_variant_id, category, quantity);
         if (!productCheckQuantity.success) {
             console.log("SP ko đủ hàng");
-            return res.status(400).json();
+            return res.status(400).json({message: "Sản phẩm không đủ hàng"});
         }
 
         await client.connect();
@@ -389,7 +389,7 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
         // Kiểm tra nếu không có sản phẩm trong giỏ hàng
         if (!cartItems.length) {
             console.log("Ko có sp trong giỏ")
-            return res.status(400).json();
+            return res.status(400).json({message: "Không có sản phẩm trong giỏ"});
         }
 
         // Kiểm tra từng item trong giỏ hàng
@@ -398,7 +398,7 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
             const productCheckStock = await checkProductStock(item.product_variant_id, item.category);
             if (!productCheckStock.success) {
                 console.log("Sản phẩm hết hàng: ", item.product_variant_id);
-                return res.status(400).json();
+                return res.status(400).json({message: "Sản phẩm hết hàng: " + item.product_variant_id});
             }
 
             // Nếu số lượng trong giỏ hàng lớn hơn tồn kho, điều chỉnh lại
@@ -409,14 +409,14 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
                     { $set: { quantity: productCheckStock.availableQuantity } }
                 );
                 console.log(`Số lượng sản phẩm ${item.product_variant_id} đã được điều chỉnh.`);
-                return res.status(400).json();
+                return res.status(400).json({message: "Sản phẩm nhiều hơn tồn kho, đã điều chỉnh lại"});
             }
 
             // Kiểm tra tính khả dụng của sản phẩm
             const productCheckAvailability = await checkProductAvailability(item.product_variant_id, item.category);
             if (!productCheckAvailability.success) {
                 console.log("Sản phẩm đã bị xóa: ", item.product_variant_id);
-                return res.status(400).json();
+                return res.status(400).json({message: "Sản phẩm đã bị xóa: " + item.product_variant_id});
             }
         }
 
@@ -436,7 +436,7 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
                     break;
                 default:
                     console.log("Category lỗi", item.product_variant_id);
-                    return res.status(400).json();
+                    return res.status(400).json({message: "Category lỗi"});
             }
 
             // Trừ tồn kho trong collection tương ứng
@@ -448,7 +448,7 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
             // Kiểm tra kết quả cập nhật
             if (updatedStock.modifiedCount === 0) {
                 console.log(`Không thể trừ tồn kho cho sản phẩm ${item.product_variant_id} thuộc danh mục ${item.category}.`)
-                return res.status(400).json();
+                return res.status(400).json({message: "Không thể trừ tồn kho"});
             }
         }
 
@@ -456,7 +456,7 @@ router.get("/cartItems/verify", authenticateToken, async (req, res) => {
         const reserveStock = await reserveStockForUser(userId, cartItems);
         if (!reserveStock.success) {
             console.log("Lỗi giữ hàng");
-            return res.status(400).json();
+            return res.status(400).json({message: "Lỗi giữ hàng"});
         }
 
         // Nếu tất cả đều hợp lệ, trả về thành công
