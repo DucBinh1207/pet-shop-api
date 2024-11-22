@@ -119,7 +119,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
 
             if (!products || products.length === 0) {
                 console.log("Không có sản phẩm nào trong giỏ hàng");
-                return res.status(400).json({message: "Không có sản phẩm nào trong giỏ hàng"});
+                return res.status(400).json({ message: "Không có sản phẩm nào trong giỏ hàng" });
             }
             console.log("Dữ liệu giỏ hàng:", products);
 
@@ -127,7 +127,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
             await redis.del(cartKey);
         } else {
             console.log("Hết thời gian giữ hàng");
-            return res.status(400).json({message: "Hết thời gian giữ hàng"});
+            return res.status(400).json({ message: "Hết thời gian giữ hàng" });
         }
 
         // Xóa dữ liệu giữ hàng tạm (cartKeyLater)
@@ -213,25 +213,16 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
             note: note || null,
             status: 5
         };
-        // 6: đơn hàng đang chờ xác nhận
-        // 5: đơn hàng đã được đặt
-        // 4: đơn hàng đang được chuẩn bị
-        // 3: đơn hàng đang được vận chuyển
-        // 2: đơn hàng đang được giao tới bạn
-        // 1: đơn hàng đã giao thành công
-        // 0: đơn hàng đã bị hủy
-        // 5 6 4 3 2 1
 
         const orderResult = await ordersCollection.insertOne(newOrder);
         const id_order = orderResult.insertedId;
 
         if (!Array.isArray(products)) {
-            // Nếu là đối tượng, chuyển đối tượng đó thành mảng với cấu trúc { product_variant_id, category, quantity }
             if (typeof products === 'object') {
-                products = [products]; // Chuyển đối tượng thành mảng với 1 phần tử là đối tượng đó
+                products = [products];
             } else {
                 console.log("Dữ liệu không hợp lệ:", products);
-                return res.status(400).json({message: "Dữ liệu không hợp lệ"});
+                return res.status(400).json({ message: "Dữ liệu không hợp lệ" });
             }
         }
         console.log("Dữ liệu giỏ hàng sau khi chuyển:", products);
@@ -250,6 +241,11 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
                             name: productInfo.name,
                             price: pet.price,
                         };
+                        // Tăng sold
+                        await db.collection("products").updateOne(
+                            { _id: pet.id_product },
+                            { $inc: { sold: product.quantity } }
+                        );
                     }
                 } else if (product.category === "foods") {
                     const food = await db.collection("foods").findOne({ _id: product.product_variant_id });
@@ -262,6 +258,11 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
                             weight: food.weight,
                             price: food.price,
                         };
+                        // Tăng sold
+                        await db.collection("products").updateOne(
+                            { _id: food.id_product },
+                            { $inc: { sold: product.quantity } }
+                        );
                     }
                 } else if (product.category === "supplies") {
                     const supplies = await db.collection("supplies").findOne({ _id: product.product_variant_id });
@@ -274,6 +275,11 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
                             size: supplies.size,
                             price: supplies.price,
                         };
+                        // Tăng sold
+                        await db.collection("products").updateOne(
+                            { _id: supplies.id_product },
+                            { $inc: { sold: product.quantity } }
+                        );
                     }
                 }
 
@@ -281,8 +287,8 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
                 return {
                     id_order: id_order.toString(),
                     category: product.category,
-                    quantity: product.quantity, // Sử dụng quantity từ product
-                    option: option, // Thêm trường option
+                    quantity: product.quantity,
+                    option: option,
                 };
             })
         );
@@ -298,16 +304,13 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
 
         // Tạo bản ghi payment mới trong collection `payments`
         const newPayment = {
-            _id: Date.now().toString(), // ID duy nhất cho payment
+            _id: Date.now().toString(),
             id_order: id_order.toString(),
             date_created: new Date(),
             payment_at: null,
             amount: total_price,
             method: payment_method,
             status: 2
-            // 1: Thanh toán thành công
-            // 2: Chờ thanh toán
-            // 3: Thanh toán thất bại
         };
 
         await paymentsCollection.insertOne(newPayment);
@@ -316,7 +319,7 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
         res.status(201).json({ id_order: id_order.toString() });
 
     } catch (error) {
-        console.error('Lỗi tạo order', error); // In ra lỗi nếu có
+        console.error('Lỗi tạo order', error);
         res.status(500).json({ message: "Lỗi máy chủ", error });
     }
 });
