@@ -100,10 +100,12 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
         const completeCartItems = await Promise.all(cartItems.map(async (item) => {
             let completeItem = {
                 id: item._id,
+                id_product: "",
                 product_variant_id: item.product_variant_id,
                 category: item.category,
                 name: "",
                 quantity: parseInt(item.quantity, 10),
+                stock: null,
                 ingredient: "",
                 weight: "",
                 size: "",
@@ -118,31 +120,37 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
                 const petInfo = await petCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: petInfo.id_product });
                 if (productInfo && petInfo) {
+                    completeItem.id_product = productInfo._id;
                     completeItem.name = productInfo.name;
                     completeItem.price = petInfo.price;
                     completeItem.image = productInfo.image;
+                    completeItem.stock = petInfo.quantity;
                     completeItem.status = 1;
                 }
             } else if (item.category === "foods") {
                 const foodInfo = await foodCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: foodInfo.id_product });
                 if (productInfo && foodInfo) {
+                    completeItem.id_product = productInfo._id;
                     completeItem.name = productInfo.name;
                     completeItem.price = foodInfo.price;
                     completeItem.image = productInfo.image;
                     completeItem.ingredient = foodInfo.ingredient;
                     completeItem.weight = foodInfo.weight;
+                    completeItem.stock = foodInfo.quantity;
                     completeItem.status = 1;
                 }
             } else if (item.category === "supplies") {
                 const suppliesInfo = await suppliesCollection.findOne({ _id: item.product_variant_id });
                 const productInfo = await productsCollection.findOne({ _id: suppliesInfo.id_product });
                 if (suppliesInfo && productInfo) {
+                    completeItem.id_product = productInfo._id;
                     completeItem.name = productInfo.name;
                     completeItem.image = productInfo.image;
                     completeItem.price = suppliesInfo.price;
                     completeItem.size = suppliesInfo.size;
                     completeItem.color = suppliesInfo.color;
+                    completeItem.stock = suppliesInfo.quantity;
                     completeItem.status = 1;
                 }
             }

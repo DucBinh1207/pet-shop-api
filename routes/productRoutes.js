@@ -134,13 +134,14 @@ router.get('/products/foods', async (req, res) => {
         // Query parameters
         const ingredient = req.query.ingredient?.toLowerCase() || 'all';
         const weightQuery = req.query.weight || 'all';
-        const categories = req.query.category ? req.query.category.split(',').map(c => c.toLowerCase()) : [];
         const sortBy = req.query.sortBy || 'default';
         const minPrice = parseFloat(req.query.minPrice) || 0;
         const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
+        const pet_type = req.query.pet_type || 'all';
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
+        console.log({ pet_type });
         // Build filters for foods
         let foodFilters = {
             status: 1,
@@ -160,11 +161,13 @@ router.get('/products/foods', async (req, res) => {
             };
         }
 
-        // Filter by categories
-        if (categories.length > 0) {
-            foodFilters['category'] = { $in: categories.map(c => new RegExp(`^${c}$`, 'i')) };
+        if (pet_type !== 'all') {
+            if (pet_type === 'Chó-Mèo') {
+                foodFilters['pet_type'] = { $regex: new RegExp(`Chó và mèo`, 'i') }; // Trả về "Chó và mèo"
+            } else {
+                foodFilters['pet_type'] = { $regex: new RegExp(`^${pet_type}$`, 'i') }; // Khớp chính xác "Chó" hoặc "Mèo"
+            }
         }
-
         // Lấy danh sách foods khớp filter
         const matchedFoods = await foodsCollection.find(foodFilters).toArray();
 
@@ -421,7 +424,7 @@ router.get('/products/supplies', async (req, res) => {
 });
 // Search sp
 router.get('/products/search', async (req, res) => {
-    const name = req.body; // Lấy giá trị name từ query string
+    const name = req.query.name; // Lấy giá trị name từ query string
 
     if (!name) {
         return res.status(400).json();
@@ -435,13 +438,32 @@ router.get('/products/search', async (req, res) => {
         const suppliesCollection = database.collection('supplies');
         const petsCollection = database.collection('pets');
 
+        let filters = {};
+        if (name) {
+            const normalizeText = (text) =>
+                text
+                    .normalize('NFD') // Phân tách Unicode
+                    .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
+                    .replace(/[^a-zA-Z0-9 ]/g, '') // Loại bỏ ký tự đặc biệt
+                    .toLowerCase();
+
+            const normalizedSearch = normalizeText(name);
+
+            filters.$or = [
+                {
+                    name: { $regex: new RegExp(normalizedSearch, 'i') },
+                    status: 1
+                },
+
+            ];
+        }
+        let products = await productsCollection.find(filters).toArray();
         // Tìm kiếm sản phẩm theo tên và chỉ lấy sản phẩm có status = 1
-        const products = await productsCollection
-            .find({
-                name: { $regex: name.toString(), $options: 'i' },
-                status: 1
-            })
-            .toArray();
+        // const products = await productsCollection
+        //     .find({
+        //         name: { $regex: name.toString(), $options: 'i' },
+        //     })
+        //     .toArray();
 
         // Custom tên trường trả về
         const customProducts = await Promise.all(
@@ -498,6 +520,7 @@ router.get('/products/search', async (req, res) => {
         await client.close();
     }
 });
+
 
 
 module.exports = router;
