@@ -100,7 +100,7 @@ router.get("/cartItems", authenticateToken, async (req, res) => {
         const completeCartItems = await Promise.all(cartItems.map(async (item) => {
             let completeItem = {
                 id: item._id,
-                id_product: "",
+                product_id: "",
                 product_variant_id: item.product_variant_id,
                 category: item.category,
                 name: "",
