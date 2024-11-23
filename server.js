@@ -11,7 +11,8 @@ const userRoutes = require("./routes/userRoutes");
 const adminProductRoutes = require("./admin/productRoutes");
 const adminUserRoutes = require("./admin/userRoutes");
 const productRoutes = require("./routes/productRoutes");
-
+const adminCartRoutes = require("./admin/cartRoutes");
+const adminOrdersRoutes = require("./admin/orderRoutes");
 
 const listenForExpirationEvents = require("./middleware/redisSubscriber");
 const {returnStock} = require("./product/product");
@@ -84,6 +85,8 @@ app.use("/api", userRoutes);
 app.use("/api", productRoutes);
 app.use("/api", adminProductRoutes);
 app.use("/api", adminUserRoutes);
+app.use("/api", adminCartRoutes);
+app.use("/api", adminOrdersRoutes);
 
 app.use(express.static("public"));
 
