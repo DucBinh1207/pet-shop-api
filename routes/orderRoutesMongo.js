@@ -213,7 +213,14 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
             note: note || null,
             status: 5
         };
-
+        // 6: đơn hàng đang chờ xác nhận
+        // 5: đơn hàng đã được đặt
+        // 4: đơn hàng đang được chuẩn bị
+        // 3: đơn hàng đang được vận chuyển
+        // 2: đơn hàng đang được giao tới bạn
+        // 1: đơn hàng đã giao thành công
+        // 0: đơn hàng đã bị hủy
+        // 5 6 4 3 2 1
         const orderResult = await ordersCollection.insertOne(newOrder);
         const id_order = orderResult.insertedId;
 
@@ -312,7 +319,9 @@ router.post('/orders/create', authenticateToken, async (req, res) => {
             method: payment_method,
             status: 2
         };
-
+        // 1: Thanh toán thành công
+        // 2: Chờ thanh toán
+        // 3: Thanh toán thất bại
         await paymentsCollection.insertOne(newPayment);
         console.log("Đã tạo bản ghi payment");
 

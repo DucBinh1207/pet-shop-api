@@ -61,19 +61,19 @@ router.post('/admin/users/create', authenticateToken, upload.single('image'), as
         return res.status(400).json();
     }
 
-    await client.connect();
-    const db = client.db("PBL6");
-    const usersCollection = db.collection("users");
-
-    const existingUser = await usersCollection.findOne({ email });
-    if (existingUser) {
-        console.log("Email đã tồn tại.");
-        return res.status(400).json();
-    }
-
     try {
+        await client.connect();
+        const db = client.db("PBL6");
+        const usersCollection = db.collection("users");
+
+        const existingUser = await usersCollection.findOne({ email });
+        if (existingUser) {
+            console.log("Email đã tồn tại.");
+            return res.status(400).json();
+        }
+
         let imageUrl = null;
-        
+
         // Chỉ xử lý ảnh nếu có file được upload
         if (req.file) {
             const imagePath = req.file.path;
@@ -235,12 +235,11 @@ router.get('/admin/users/get', authenticateToken, async (req, res) => {
 
     console.log("Query Parameters:", req.query);
 
-    // Kết nối tới MongoDB
-    await client.connect();
-    const db = client.db("PBL6");
-    const usersCollection = db.collection("users");
-
     try {
+        // Kết nối tới MongoDB
+        await client.connect();
+        const db = client.db("PBL6");
+        const usersCollection = db.collection("users");
         // Lấy query parameters để lọc dữ liệu
         const { search, id_role: roleFilter, page = 1, limit = 10, status } = req.query;
 
@@ -316,12 +315,11 @@ router.put('/admin/users/delete', authenticateToken, async (req, res) => {
         return res.status(400).json();
     }
 
-    // Kết nối tới MongoDB
-    await client.connect();
-    const db = client.db("PBL6");
-    const usersCollection = db.collection("users");
-
     try {
+        // Kết nối tới MongoDB
+        await client.connect();
+        const db = client.db("PBL6");
+        const usersCollection = db.collection("users");
         // Tìm và cập nhật trạng thái `status` về 0 (xóa mềm)
         const result = await usersCollection.updateOne(
             { _id: id_user }, // Điều kiện tìm người dùng theo id
