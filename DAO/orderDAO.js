@@ -52,6 +52,7 @@ exports.getOrderDetail = async (id_order) => {
         await client.connect();
         const db = client.db("PBL6"); // Kết nối đến database "PBL6"
         const ordersCollection = db.collection('orders'); // Truy cập collection "orders"
+        const vouchersCollection = db.collection('vouchers'); // Truy cập collection "vouchers"
 
         // Tìm kiếm đơn hàng dựa trên id_order trong MongoDB
         const order = await ordersCollection.findOne({ _id: id_order });
@@ -64,8 +65,14 @@ exports.getOrderDetail = async (id_order) => {
             };
         }
 
-        // Chuẩn bị thông tin đơn hàng để trả về
-        const orderInfo = new OrderInfo(order);
+        // Tìm kiếm thông tin voucher nếu có
+        let voucherInfo = null;
+        if (order.voucher_code) {
+            voucherInfo = await vouchersCollection.findOne({ code: order.voucher_code });
+        }
+
+        // Tạo thông tin đơn hàng
+        const orderInfo = new OrderInfo(order, voucherInfo);
 
         // Gửi thông tin đơn hàng dưới dạng JSON
         return {
@@ -400,14 +407,15 @@ exports.webGetOrder = async (id_order) => {
         const db = client.db("PBL6"); // Kết nối đến database "PBL6"
         const ordersCollection = db.collection('orders'); // Truy cập collection "orders"
         const orderItemsCollection = db.collection('order_items'); // Truy cập collection "order_items"
-
+        const vouchersCollection = db.collection('vouchers');
+        
         // Tìm kiếm đơn hàng dựa trên id_order trong MongoDB
         const order = await ordersCollection.findOne({ _id: id_order });
 
         if (!order) {
             console.log("Không tìm thấy order với id: " + id_order);
             return {
-                status: 404,
+                status: 200,
                 message: 'Đơn hàng không tìm thấy'
             };
         }
@@ -449,6 +457,11 @@ exports.webGetOrder = async (id_order) => {
             return completeItem;
         }));
 
+        let voucherInfo = null;
+        if (order.voucher_code) {
+            voucherInfo = await vouchersCollection.findOne({ code: order.voucher_code });
+        }
+
         // Thêm danh sách sản phẩm vào thông tin đơn hàng
         const orderInfo = {
             id: order._id,
@@ -467,6 +480,8 @@ exports.webGetOrder = async (id_order) => {
             district: order.district,
             ward: order.ward,
             street: order.street,
+            voucher: order.voucher_code ? order.voucher_code : null,
+            percent: voucherInfo ? voucherInfo.percent : "0",
             orderItems: completeOrderItems // Thêm orderItems vào thông tin đơn hàng
         };
 
