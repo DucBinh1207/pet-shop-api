@@ -1,6 +1,5 @@
-// bean/OrderInfo.js
 class OrderInfo {
-    constructor(order) {
+    constructor(order, voucherInfo) {
         this.id = order._id;
         this.date_created = order.date;
         this.status = order.status;
@@ -17,6 +16,10 @@ class OrderInfo {
         this.district = order.district;
         this.ward = order.ward;
         this.street = order.street;
+
+        // Thêm thông tin voucher vào đơn hàng
+        this.voucher = order.voucher_code ? order.voucher_code : null;
+        this.percent = voucherInfo ? voucherInfo.percent : "0"; // Nếu có voucher, lấy percent, nếu không thì mặc định là 0
     }
 }
 
