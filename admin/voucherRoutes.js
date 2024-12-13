@@ -3,7 +3,7 @@ const router = express.Router();
 // Middleware để parse JSON body
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
-const { client } = require("../db");
+const { getClient } = require("../db");
 const { v4: uuidv4 } = require('uuid');
 
 router.get("/admin/vouchers", authenticateToken, async (req, res) => {
@@ -21,7 +21,7 @@ router.get("/admin/vouchers", authenticateToken, async (req, res) => {
     const sortBy = req.query.sortBy || "latest"; // Sắp xếp, mặc định là mới nhất
 
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const vouchersCollection = db.collection("vouchers");
 
@@ -70,7 +70,7 @@ router.get("/admin/vouchers", authenticateToken, async (req, res) => {
         console.error("Error filtering orders:", error);
         res.status(500).json({ message: "Lỗi máy chủ", error });
     } finally {
-        await client.close(); // Đảm bảo đóng kết nối sau khi xử lý
+
     }
 });
 
@@ -91,7 +91,7 @@ router.post('/admin/vouchers/create', authenticateToken, async (req, res) => {
     }
 
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const vouchersCollection = db.collection("vouchers");
 
@@ -118,7 +118,7 @@ router.post('/admin/vouchers/create', authenticateToken, async (req, res) => {
         return res.status(500).json({ message: "Lỗi tạo voucher." });
     } finally {
         // Đảm bảo đóng kết nối
-        await client.close();
+
     }
 });
 // Update voucher
@@ -139,7 +139,7 @@ router.put('/admin/vouchers/update', authenticateToken, async (req, res) => {
 
     try {
         // Kết nối đến MongoDB
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const vouchersCollection = db.collection("vouchers");
 
@@ -165,7 +165,7 @@ router.put('/admin/vouchers/update', authenticateToken, async (req, res) => {
         console.error('Error updating voucher:', error);
         res.status(500).json({ message: 'Server error' });
     } finally {
-        await client.close();
+
     }
 });
 // Delete voucher
@@ -186,7 +186,7 @@ router.put('/admin/vouchers/delete', authenticateToken, async (req, res) => {
 
     try {
         // Kết nối tới MongoDB
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const vouchersCollection = db.collection("vouchers");
         // Tìm và cập nhật trạng thái `status` về 0 (xóa mềm)
@@ -204,7 +204,7 @@ router.put('/admin/vouchers/delete', authenticateToken, async (req, res) => {
         console.error('Error updating voucher status:', error);
         res.status(500).json({ message: 'An error occurred while deleting voucher' });
     } finally {
-        await client.close();
+
     }
 });
 

@@ -4,8 +4,7 @@ const jwt = require('jsonwebtoken');
 // Middleware để parse JSON body
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
-const { client } = require("../db");
-
+const { getClient } = require("../db");
 router.get("/admin/income/orders", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
@@ -30,7 +29,7 @@ router.get("/admin/income/orders", authenticateToken, async (req, res) => {
     const endDate = parseDate(endDateString); // Chuyển đổi ngày kết thúc
 
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const ordersCollection = db.collection("orders");
 
@@ -79,7 +78,6 @@ router.get("/admin/income/orders", authenticateToken, async (req, res) => {
         console.error("Error calculating income:", error);
         res.status(500).json({ message: "Lỗi máy chủ", error });
     } finally {
-        await client.close(); // Đóng kết nối
     }
 });
 
@@ -105,7 +103,7 @@ router.get("/admin/income/products/soldNumber", authenticateToken, async (req, r
     const endDate = parseDate(endDateString); // Chuyển đổi ngày kết thúc
 
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const ordersCollection = db.collection("orders");
         const orderItemsCollection = db.collection("order_items");
@@ -157,7 +155,6 @@ router.get("/admin/income/products/soldNumber", authenticateToken, async (req, r
         console.error("Error calculating sold products:", error);
         res.status(500).json({ message: "Lỗi máy chủ", error });
     } finally {
-        await client.close(); // Đóng kết nối
     }
 }
 );

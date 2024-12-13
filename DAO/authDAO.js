@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const redisClient = require("../middleware/redisClient");
 require("dotenv").config();
-const { client } = require("../db");
 const nodemailer = require("nodemailer");
 const redis = redisClient.init();
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -12,6 +11,8 @@ const {
     registerUser,
     generateToken,
 } = require("../auth/auth");
+
+const { getClient } = require("../db");
 
 exports.loginUser = async (email, password, isRememberMe) => {
     try {
@@ -162,7 +163,7 @@ exports.verifyToken = async (token) => {
 
 exports.forgotPassword = async (email) => {
     try {
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
         const usersCollection = database.collection("users");
 
@@ -317,8 +318,6 @@ exports.forgotPassword = async (email) => {
             status: 500,
             message: "Server error"
         };
-    } finally {
-        await client.close();
     }
 };
 
@@ -337,8 +336,8 @@ exports.changePassword = async (token, password) => {
         const salt = await bcrypt.genSalt(saltRounds);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const usersCollection = db.collection("users"); // Truy cập vào collection 'users'
 
         // Tìm người dùng theo _id từ MongoDB

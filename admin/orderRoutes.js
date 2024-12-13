@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-
+const { getClient } = require("../db");
 // Middleware để parse JSON body
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
-const { client } = require("../db");
+
 
 router.get("/admin/orders", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
@@ -28,8 +28,8 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
     console.log({ page });
 
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const ordersCollection = db.collection("orders"); // Truy cập vào collection 'orders'
 
         // Điều kiện lọc
@@ -82,7 +82,6 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
         console.error("Error loading orders:", error); // In ra lỗi nếu có
         res.status(500).json({ message: "Lỗi máy chủ", error });
     } finally {
-        await client.close(); // Đảm bảo đóng kết nối sau khi xử lý xong
     }
 });
 

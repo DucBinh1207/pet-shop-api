@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { client } = require('../db');
-
+const { getClient } = require("../db");
 
 exports.getSuppliesDetail = async (productId) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const suppliesCollection = database.collection('supplies');
 
@@ -58,7 +57,6 @@ exports.getSuppliesDetail = async (productId) => {
             message: 'Internal Server Error'
         };
     } finally {
-        await client.close();
     }
 };
 
@@ -66,8 +64,8 @@ exports.getFoodDetail = async (foodId) => {
     try {
 
         // Kết nối tới MongoDB và lấy các collection
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const foodsCollection = database.collection('foods');
         const productsCollection = database.collection('products');
 
@@ -131,15 +129,14 @@ exports.getFoodDetail = async (foodId) => {
             message: 'Internal Server Error'
         };
     } finally {
-        await client.close(); // Đảm bảo đóng kết nối MongoDB
     }
 }
 
 exports.getPetDetail = async (petId) => {
     try {
         // Kết nối tới MongoDB và lấy các collection
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const petsCollection = database.collection('pets');
         const productsCollection = database.collection('products');
 
@@ -211,6 +208,5 @@ exports.getPetDetail = async (petId) => {
             message: 'Internal Server Error'
         };
     } finally {
-        await client.close(); // Đảm bảo đóng kết nối MongoDB
     }
 }

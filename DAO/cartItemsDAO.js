@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 // Middleware để parse JSON body
 router.use(express.json());
-const { client } = require("../db");
 const {
     checkValidProduct,
     checkProductStockForCart,
@@ -10,7 +9,7 @@ const {
     checkProductAvailability,
     reserveStockForUser,
 } = require("../product/product");
-
+const { getClient } = require("../db");
 const CompleteCartItem = require('../BEAN/completeCartItems');
 
 exports.addToCart = async (product_variant_id, category,
@@ -35,8 +34,8 @@ exports.addToCart = async (product_variant_id, category,
             };
         }
 
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const cartCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
         // Kiểm tra xem đã có sản phẩm với cùng 3 tham số (userId, product_variant_id, category) trong giỏ hàng hay chưa
@@ -86,8 +85,8 @@ exports.addToCart = async (product_variant_id, category,
 
 exports.getCartItems = async (userId) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
         const productsCollection = db.collection('products'); // Collection chứa thông tin sản phẩm chung
         const petCollection = db.collection('pets'); // Collection chứa thông tin sản phẩm loại pets
@@ -192,8 +191,8 @@ exports.getCartItems = async (userId) => {
 
 exports.getCartItemsMobile = async (userId) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
         const productsCollection = db.collection('products'); // Collection chứa thông tin sản phẩm chung
         const petCollection = db.collection('pets'); // Collection chứa thông tin sản phẩm loại pets
@@ -305,8 +304,8 @@ exports.updateCart = async (userId, cartItems) => {
     const idsToKeep = cartItems.map(item => item.id);
 
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
         // Lặp qua từng cart item để cập nhật
@@ -363,8 +362,8 @@ exports.updateCart = async (userId, cartItems) => {
 
 exports.deleteCartItems = async (userId, id_item) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
         // Xóa sản phẩm có id_item và thuộc về user
@@ -394,8 +393,8 @@ exports.deleteCartItems = async (userId, id_item) => {
 
 exports.verifyCart = async (userId) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
 
         // Tìm tất cả cart items của user trong MongoDB
@@ -512,8 +511,8 @@ exports.verifyCart = async (userId) => {
 exports.verifyCart2 = async (userId, selectedIds) => {
     try {
         
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const cartItemsCollection = db.collection('cart_items'); // Truy cập vào collection 'cart_items'
         
         if (!Array.isArray(selectedIds)) {

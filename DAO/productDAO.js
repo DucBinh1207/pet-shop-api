@@ -1,12 +1,11 @@
 const express = require('express');
-const router = express.Router();
-const { client } = require('../db')
+const { getClient } = require("../db");
 
 exports.getPet = async (category, breeds, sortBy,
     minPrice, maxPrice, page, limit) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const petsCollection = database.collection('pets');
 
@@ -115,15 +114,14 @@ exports.getPet = async (category, breeds, sortBy,
             message: 'Internal Server Error'
         };
     } finally {
-        await client.close();
     }
 };
 
 exports.getFood = async (ingredient, weightQuery, sortBy,
     minPrice, maxPrice, pet_type, page, limit) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const foodsCollection = database.collection('foods');
 
@@ -259,16 +257,14 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
             status: 500,
             message: 'Internal Server Error'
         };
-    } finally {
-        await client.close();
     }
 }
 
 exports.getSupplies = async (category, sortBy, color, size, type,
     minPrice, maxPrice, page, limit) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const suppliesCollection = database.collection('supplies');
 
@@ -404,15 +400,14 @@ exports.getSupplies = async (category, sortBy, color, size, type,
             status: 500,
             message: 'Internal Server Error'
         };
-    } finally {
-        await client.close();
-    }
+    }const client = getClient();
+    const database = client.db("PBL6");
 }
 
 exports.searchProduct = async (name) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const foodsCollection = database.collection('foods');
         const suppliesCollection = database.collection('supplies');
@@ -500,15 +495,13 @@ exports.searchProduct = async (name) => {
             status: 500,
             message: 'Internal Server Error'
         };
-    } finally {
-        await client.close();
     }
 }
 
 exports.getBestSeller = async (amount) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
 
         // Lấy các sản phẩm có sold cao nhất
@@ -528,15 +521,13 @@ exports.getBestSeller = async (amount) => {
             status: 500,
             message: 'Internal Server Error'
         };
-    } finally {
-        await client.close();
     }
 }
 
 exports.searchProductMobile = async (name) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const foodsCollection = database.collection('foods');
         const suppliesCollection = database.collection('supplies');
@@ -649,8 +640,6 @@ exports.searchProductMobile = async (name) => {
             status: 500,
             message: 'Internal Server Error'
         };
-    } finally {
-        await client.close();
     }
 };
 

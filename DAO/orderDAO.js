@@ -5,7 +5,6 @@ const redis = redisClient.init();
 
 // Middleware để parse JSON body
 router.use(express.json());
-const { client } = require("../db");
 const {
     checkValidProduct,
     checkProductStockForCart,
@@ -13,11 +12,12 @@ const {
 } = require("../product/product");
 const Order = require('../BEAN/Order');
 const OrderInfo = require('../BEAN/OrderInfo ');
+const { getClient } = require("../db");
 
 exports.getOrder = async (id_user) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const ordersCollection = db.collection('orders'); // Truy cập vào collection 'orders'
 
         // Truy vấn các đơn hàng của user từ MongoDB
@@ -49,8 +49,8 @@ exports.getOrder = async (id_user) => {
 
 exports.getOrderDetail = async (id_order) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối đến database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const ordersCollection = db.collection('orders'); // Truy cập collection "orders"
         const vouchersCollection = db.collection('vouchers'); // Truy cập collection "vouchers"
 
@@ -127,8 +127,8 @@ exports.createOrder = async (
                 message: `Các trường bị thiếu: ${missingFields.join(', ')}`
             };
         }
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới cơ sở dữ liệu MongoDB
+        const client = getClient();
+        const db = client.db("PBL6");
         const ordersCollection = db.collection('orders');
         const vouchersCollection = db.collection('vouchers');
 
@@ -339,8 +339,8 @@ exports.createOrder = async (
 
 exports.getOrderItems = async (id_order) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối đến database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const orderItemsCollection = db.collection('order_items'); // Truy cập collection "order_items"
 
         // Lấy thông tin các order items từ id_order
@@ -403,8 +403,8 @@ exports.getOrderItems = async (id_order) => {
 
 exports.webGetOrder = async (id_order) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối đến database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const ordersCollection = db.collection('orders'); // Truy cập collection "orders"
         const orderItemsCollection = db.collection('order_items'); // Truy cập collection "order_items"
         const vouchersCollection = db.collection('vouchers');
@@ -503,7 +503,7 @@ exports.webGetOrder = async (id_order) => {
 exports.buyNow = async (userId, product_variant_id, category, quantity) => {
     try {
         quantity = parseInt(quantity, 10);
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
 
         // Kiểm tra tính hợp lệ của sản phẩm
