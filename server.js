@@ -15,6 +15,7 @@ const adminCartRoutes = require("./admin/cartRoutes");
 const adminOrdersRoutes = require("./admin/orderRoutes");
 const adminIncomeRoutes = require("./admin/incomeRoutes");
 const vouchersRoutes = require("./admin/voucherRoutes");
+const { connectToDB, closeDBConnection } = require("./db");
 
 const listenForExpirationEvents = require("./middleware/redisSubscriber");
 const {returnStock} = require("./product/product");
@@ -104,7 +105,17 @@ listenForExpirationEvents(async (expiredKey, data) => {
   await returnStock(expiredKey, data);
 });
 
+connectToDB();
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
   connectToMongoDB();
+});
+
+process.on("SIGINT", async () => {
+  await closeDBConnection(); // Đóng kết nối MongoDB
+  server.close(() => {
+    console.log("Server is closed");
+    process.exit(0); // Thoát ứng dụng
+  });
 });

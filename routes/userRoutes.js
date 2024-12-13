@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const multer = require('multer');
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
-const { client } = require("../db");
+const { getClient } = require("../db");
 // Cấu hình multer để lưu trữ ảnh
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -25,8 +25,8 @@ router.get('/user/info', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id từ token
 
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
         // Tìm người dùng theo _id từ MongoDB
@@ -59,8 +59,8 @@ router.put('/user/change-password', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id người dùng từ token
 
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
         // Tìm người dùng theo _id từ MongoDB
@@ -97,8 +97,8 @@ router.put('/user/updateAddress', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id người dùng từ token
 
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
         // Tìm người dùng theo userId trước khi cập nhật
@@ -139,8 +139,8 @@ router.put('/user/update', authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id người dùng từ token
     console.log(userId);
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới database "PBL6"
+        const client = getClient();
+        const db = client.db("PBL6");
         const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
 
         // Tìm người dùng theo userId trước khi cập nhật

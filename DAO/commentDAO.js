@@ -1,13 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const { client } = require("../db");
 const { v4: uuidv4 } = require('uuid');
-
+const { getClient } = require("../db");
 const EnrichedComment = require('../BEAN/EnrichedComment');
 
 exports.addComment = async (id_product, rating, content, userId) => {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const commentsCollection = db.collection("comments");
         const productsCollection = db.collection("products");
@@ -68,13 +67,12 @@ exports.addComment = async (id_product, rating, content, userId) => {
             message: "Internal server error" 
         };
     } finally {
-        await client.close();
     }
 };
 
 exports.getComment = async (productId) => {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const commentsCollection = db.collection("comments");
         const usersCollection = db.collection("users");
@@ -107,13 +105,12 @@ exports.getComment = async (productId) => {
             message: "Internal server error"
         };
     } finally {
-        await client.close();
     }
 };
 
 exports.deleteComment = async (commentId, userId) => {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const commentsCollection = db.collection("comments");
         // Tìm comment theo `commentId`

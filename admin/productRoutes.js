@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const { authenticateToken } = require("../middleware/authenticateToken");
-const { client } = require("../db");
+const { getClient } = require("../db");
 const {
     addPet,
     addFood,
@@ -333,9 +333,8 @@ router.put('/admin/products/delete', authenticateToken, async (req, res) => {
 
     try {
         // Kết nối đến database
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
-
         // Cập nhật status = 0 trong collection products
         const productsCollection = database.collection("products");
         const updateProductResult = await productsCollection.updateOne(
@@ -383,7 +382,6 @@ router.put('/admin/products/delete', authenticateToken, async (req, res) => {
         console.error("Error updating product status:", err);
         return res.status(500).json({ message: "Internal server error" });
     } finally {
-        await client.close();
     }
 });
 // Cập nhật ảnh cho sp
@@ -472,8 +470,8 @@ router.get('/admin/products/pets', authenticateToken, async (req, res) => {
 
 
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const petsCollection = database.collection('pets');
 
@@ -583,8 +581,8 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
     }
 
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const foodsCollection = database.collection('foods');
 
@@ -753,14 +751,14 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         console.error(err);
         res.status(500).json({ message: 'Internal Server Error' });
     } finally {
-        await client.close();
+
     }
 });
 // Get supplies
 router.get('/admin/products/supplies', async (req, res) => {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const suppliesCollection = database.collection('supplies');
 
@@ -915,7 +913,7 @@ router.get('/admin/products/supplies', async (req, res) => {
         console.error(err);
         res.status(500).json({ message: 'Internal Server Error' });
     } finally {
-        await client.close();
+
     }
 });
 // Search sp
@@ -927,8 +925,8 @@ router.get('/admin/products/search', async (req, res) => {
     }
 
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const foodsCollection = database.collection('foods');
         const suppliesCollection = database.collection('supplies');
@@ -1005,7 +1003,7 @@ router.get('/admin/products/search', async (req, res) => {
         console.error(err);
         res.status(500).json({ message: 'Internal Server Error' });
     } finally {
-        await client.close();
+
     }
 });
 

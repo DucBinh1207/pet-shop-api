@@ -3,7 +3,7 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const router = express.Router();
 const { authenticateToken } = require("../middleware/authenticateToken");
-const { client } = require("../db");
+const { getClient } = require("../db");
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require("bcrypt");
 
@@ -62,7 +62,7 @@ router.post('/admin/users/create', authenticateToken, upload.single('image'), as
     }
 
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const usersCollection = db.collection("users");
 
@@ -113,7 +113,6 @@ router.post('/admin/users/create', authenticateToken, upload.single('image'), as
         console.error("Error creating user:", error);
         res.status(500).json({ message: "Đã xảy ra lỗi khi tạo tài khoản." });
     } finally {
-        await client.close();
     }
 });
 
@@ -144,7 +143,7 @@ router.put('/admin/users/update', authenticateToken, async (req, res) => {
 
     try {
         // Kết nối đến MongoDB
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const usersCollection = db.collection("users");
 
@@ -185,7 +184,7 @@ router.put('/admin/users/update', authenticateToken, async (req, res) => {
         console.error('Error updating user:', error);
         res.status(500).json({ message: 'Server error' });
     } finally {
-        await client.close();
+
     }
 });
 
@@ -237,7 +236,7 @@ router.get('/admin/users/get', authenticateToken, async (req, res) => {
 
     try {
         // Kết nối tới MongoDB
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const usersCollection = db.collection("users");
         // Lấy query parameters để lọc dữ liệu
@@ -296,7 +295,7 @@ router.get('/admin/users/get', authenticateToken, async (req, res) => {
         console.error("Error fetching users:", error);
         res.status(500).json({ message: "Error fetching users" });
     } finally {
-        await client.close();
+
     }
 });
 
@@ -317,7 +316,7 @@ router.put('/admin/users/delete', authenticateToken, async (req, res) => {
 
     try {
         // Kết nối tới MongoDB
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const usersCollection = db.collection("users");
         // Tìm và cập nhật trạng thái `status` về 0 (xóa mềm)
@@ -336,7 +335,7 @@ router.put('/admin/users/delete', authenticateToken, async (req, res) => {
         console.error('Error updating user status:', error);
         res.status(500).json({ message: 'An error occurred while deleting user' });
     } finally {
-        await client.close();
+
     }
 });
 

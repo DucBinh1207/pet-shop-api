@@ -1,4 +1,4 @@
-const { client } = require("../db");
+const { getClient } = require("../db");
 const cloudinary = require('cloudinary').v2;
 const { v4: uuidv4 } = require('uuid');
 
@@ -13,7 +13,7 @@ async function addPet(name, description, imagePath,
     price, gender, health, father, mother, type, deworming,
     vaccine, breed, breed_origin, trait, date_of_birth, quantity) {
     try {
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
         const productsCollection = database.collection("products");
         const petsCollection = database.collection("pets");
@@ -75,7 +75,7 @@ async function addPet(name, description, imagePath,
 async function addFood(name, description, imagePath, pet_type, nutrition_info, expire_date, brand, variations_food) {
     productFood_id = uuidv4();
     try {
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
         const productsCollection = database.collection("products");
         const foodsCollection = database.collection("foods");
@@ -143,7 +143,7 @@ async function addFood(name, description, imagePath, pet_type, nutrition_info, e
 async function addSupplies(name, description, imagePath, material, brand, type, suppliesVariations) {
     productSupplies_id = uuidv4();
     try {
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
         const productsCollection = database.collection("products");
         const suppliesCollection = database.collection("supplies");
@@ -211,7 +211,7 @@ async function updatePet(_id, name, description,
     price, gender, health, father, mother, type, deworming,
     vaccine, breed, breed_origin, trait, date_of_birth, quantity) {
     try {
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
         const productsCollection = database.collection("products");
         const petsCollection = database.collection("pets");
@@ -257,7 +257,7 @@ async function updatePet(_id, name, description,
 
 async function updateFood(_id, name, description, pet_type, nutrition_info, expire_date, brand, variations_food) {
     try {
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
         const productsCollection = database.collection("products");
         const foodsCollection = database.collection("foods");
@@ -347,7 +347,7 @@ async function updateFood(_id, name, description, pet_type, nutrition_info, expi
 
 async function updateSupplies(_id, name, description, material, brand, type, variations_supplies) {
     try {
-        await client.connect();
+        const client = getClient();
         const database = client.db("PBL6");
         const productsCollection = database.collection("products");
         const suppliesCollection = database.collection("supplies");
@@ -437,8 +437,8 @@ async function updateSupplies(_id, name, description, material, brand, type, var
 // Function to get pet products
 async function getPet(category, breeds, sortBy, minPrice, maxPrice, page, limit) {
     try {
-        await client.connect();
-        const database = client.db('PBL6');
+        const client = getClient();
+        const database = client.db("PBL6");
         const productsCollection = database.collection('products');
 
         // Filters
@@ -532,7 +532,7 @@ async function getPet(category, breeds, sortBy, minPrice, maxPrice, page, limit)
         console.error(err);
         throw new Error('Internal Server Error'); // Throw error to be caught in route
     } finally {
-        await client.close();
+
     }
 }
 module.exports = {

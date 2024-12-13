@@ -1,11 +1,11 @@
-const { client } = require("../db");
+const { getClient } = require("../db");
 const redisClient = require("../middleware/redisClient");
 const redis = redisClient.init();
 
 //Check sp có status = 1 và quantity > 0
 async function checkValidProduct(id_product_variant, category) {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
 
         // Lấy thông tin từ collection dựa trên category
@@ -31,7 +31,7 @@ async function checkValidProduct(id_product_variant, category) {
 //Check sp có số lượng tồn kho lớn hơn quantity đưa vào
 async function checkProductStockForCart(id_product_variant, category, quantity) {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
 
         // Lấy thông tin từ collection dựa trên category
@@ -57,7 +57,7 @@ async function checkProductStockForCart(id_product_variant, category, quantity) 
 //Check sp có số lượng tồn kho > 0 
 async function checkProductStock(id_product_variant, category) {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
 
         // Lấy thông tin từ collection dựa trên category
@@ -86,7 +86,7 @@ async function checkProductStock(id_product_variant, category) {
 //Check sp bị xóa chưa status = 1
 async function checkProductAvailability(id_product_variant, category) {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
 
         // Lấy thông tin từ collection dựa trên category

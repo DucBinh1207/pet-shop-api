@@ -1,16 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
-const { client } = require("../db");
-
+const { getClient } = require("../db");
 // Middleware để parse JSON body
 router.use(express.json());
 
 
 exports.applyVoucher = async (code) => {
     try {
-        await client.connect();
-        const db = client.db("PBL6"); // Kết nối tới MongoDB
+        const client = getClient();
+        const db = client.db("PBL6");
         const voucherCollection = db.collection('vouchers'); // Truy cập collection 'vouchers'
 
         // Tìm voucher theo code, status và quantity > 0

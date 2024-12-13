@@ -8,14 +8,15 @@ const { v4: uuidv4 } = require("uuid");
 const nodemailer = require("nodemailer");
 const SECRET_KEY =
   "0f5f43b5b226531628722a0f20b4c276de87615dfc8516ea4240c93f4135d4b1";
-const { client } = require("../db");
 require("dotenv").config();
 const redisClient = require("../middleware/redisClient");
 const redis = redisClient.init();
+const { getClient } = require("../db");
+
 // Hash the password for registration
 async function registerUser(email, id_role) {
   try {
-    await client.connect();
+    const client = getClient();
     const database = client.db("PBL6");
     const usersCollection = database.collection("users");
 
@@ -76,14 +77,13 @@ async function registerUser(email, id_role) {
     console.error(err);
     return { success: false, message: "Error registering user." };
   } finally {
-    await client.close();
   }
 }
 
 // Compare the password for login
 async function loginUser(email, password) {
   try {
-    await client.connect();
+    const client = getClient();
     const database = client.db("PBL6");
     const usersCollection = database.collection("users");
 
@@ -151,7 +151,6 @@ async function loginUser(email, password) {
       user: null,
     };
   } finally {
-    await client.close();
   }
 }
 
@@ -279,7 +278,7 @@ async function sendVerificationEmail(email, link) {
 
 async function resendVerificationEmail(userId, email) {
   try {
-    await client.connect();
+    const client = getClient();
     const database = client.db("PBL6");
     const usersCollection = database.collection("users");
 
@@ -327,7 +326,6 @@ async function resendVerificationEmail(userId, email) {
     console.error(err);
     return { success: false, message: "Error resending verification email." };
   } finally {
-    await client.close();
   }
 }
 
@@ -335,7 +333,7 @@ async function verifyEmail(token) {
   try {
     // console.log(token);
     const decoded = jwt.verify(token, SECRET_KEY);
-    await client.connect();
+    const client = getClient();
     const database = client.db("PBL6");
     const usersCollection = database.collection("users");
     // Find user by ID in MongoDB
