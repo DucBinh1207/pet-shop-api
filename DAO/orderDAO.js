@@ -502,6 +502,7 @@ exports.webGetOrder = async (id_order) => {
 
 exports.buyNow = async (userId, product_variant_id, category, quantity) => {
     try {
+        const quantityToReturn = quantity;
         quantity = parseInt(quantity, 10);
         const client = getClient();
         const db = client.db("PBL6");
@@ -576,6 +577,7 @@ exports.buyNow = async (userId, product_variant_id, category, quantity) => {
 
         return {
             status: 201,
+            quantityToReturn
         };
 
     } catch (error) {
