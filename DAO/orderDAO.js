@@ -324,7 +324,8 @@ exports.createOrder = async (
 
         return {
             status: 201,
-            id_order: id_order.toString()
+            id_order: id_order.toString(),
+            amount: total_price
         };
 
     } catch (error) {
