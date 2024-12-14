@@ -9,7 +9,7 @@ const { addComment, getComment, deleteComment } = require("../controllers/commen
 
 router.post("/comments/add", authenticateToken, addComment);
 
-router.get('/comments/:id_product', getComment);
+router.get('/comments', getComment);
 
 router.put('/comments/delete', authenticateToken, deleteComment);
 

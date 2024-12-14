@@ -64,26 +64,38 @@ exports.addComment = async (id_product, rating, content, userId) => {
         console.error("Error adding comment:", err);
         return {
             status: 500,
-            message: "Internal server error" 
+            message: "Internal server error"
         };
     } finally {
     }
 };
 
-exports.getComment = async (productId) => {
+exports.getComment = async (productId, page = 1, limit = 10) => {
     try {
         const client = getClient();
         const db = client.db("PBL6");
         const commentsCollection = db.collection("comments");
         const usersCollection = db.collection("users");
 
-        // Lấy tất cả các comments có id_product tương ứng từ database
-        const comments = await commentsCollection.find({ id_product: productId }).toArray();
+        page = parseInt(page, 10);
+        limit = parseInt(limit, 10);
 
+        // Tính toán offset
+        const skip = (page - 1) * limit;
+
+        // Lấy các comments có id_product tương ứng từ database với phân trang
+        const comments = await commentsCollection
+            .find({ id_product: productId })
+            .skip(skip) // Bỏ qua các bình luận trước đó
+            .limit(limit) // Giới hạn số lượng bình luận trả về
+            .toArray();
+
+        // Kiểm tra nếu không có bình luận
         if (comments.length === 0) {
             return {
-                status: 404,
-                message: "No comments found for this product."
+                status: 200,
+                currentPage: page,
+                limit
             };
         }
 
@@ -93,10 +105,17 @@ exports.getComment = async (productId) => {
             return new EnrichedComment(comment, user);
         }));
 
-        // Trả về danh sách comment đã được làm giàu dữ liệu user
+        // Đếm tổng số comments để trả thêm thông tin về tổng số trang
+        const totalComments = await commentsCollection.countDocuments({ id_product: productId });
+        const totalPages = Math.ceil(totalComments / limit);
+
+        // Trả về danh sách comment đã được làm giàu dữ liệu user và thông tin phân trang
         return {
             status: 200,
-            enrichedComments
+            enrichedComments,
+            currentPage: page,
+            totalPages,
+            limit
         };
     } catch (err) {
         console.error("Error fetching comments:", err);
@@ -104,9 +123,9 @@ exports.getComment = async (productId) => {
             status: 500,
             message: "Internal server error"
         };
-    } finally {
     }
 };
+
 
 exports.deleteComment = async (commentId, userId) => {
     try {
