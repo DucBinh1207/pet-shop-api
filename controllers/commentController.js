@@ -24,17 +24,28 @@ exports.addComment = async (req, res) => {
 }
 
 exports.getComment = async (req, res) => {
-    const productId = req.params.id_product;
+    const productId = req.query.id_product;
+    const page = req.query.page;
+    const limit = req.query.limit;
     try {
-        const result = await commentBO.getComment(productId);
+        const result = await commentBO.getComment(productId, page, limit);
 
         if (result.status === 500) {
             res.status(result.status).json({ message: result.message, error: result.error });
         } else {
             if (result.message) {
-                res.status(result.status).json({ message: result.message });
+                res.status(result.status).json({
+                    currentPage: result.currentPage,
+                    totalPages: result.totalPages,
+                    limit: result.limit
+                });
             } else {
-                res.status(result.status).json(result.enrichedComments);
+                res.status(result.status).json({
+                    comments: result.enrichedComments,
+                    currentPage: result.currentPage,
+                    totalPages: result.totalPages,
+                    limit: result.limit
+                });
             }
         }
     } catch (err) {
@@ -45,7 +56,7 @@ exports.getComment = async (req, res) => {
 }
 
 exports.deleteComment = async (req, res) => {
-    const {id} = req.body;
+    const { id } = req.body;
     const userId = req.user.userId;
     try {
         const result = await commentBO.deleteComment(id, userId);

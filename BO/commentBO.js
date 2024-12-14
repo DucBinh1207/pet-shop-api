@@ -5,8 +5,8 @@ exports.addComment = async (id_product, rating, content, userId) => {
     return await commentDAO.addComment(id_product, rating, content, userId);
 };
 
-exports.getComment = async (productId) => {
-    return await commentDAO.getComment(productId);
+exports.getComment = async (productId, page, limit) => {
+    return await commentDAO.getComment(productId, page, limit);
 };
 
 exports.deleteComment = async (commentId, userId) => {
