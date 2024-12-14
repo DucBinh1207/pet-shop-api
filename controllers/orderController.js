@@ -150,7 +150,7 @@ exports.buyNow = async (req, res) => {
             if (result.message) {
                 res.status(result.status).json({ message: result.message });
             } else {
-                res.status(result.status).json();
+                res.status(result.status).json({quantity: result.quantityToReturn});
             }
         }
     } catch (err) {
