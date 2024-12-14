@@ -476,6 +476,7 @@ exports.searchProduct = async (name) => {
 
                 return {
                     id: product._id, // Chuyển `_id` thành `id`
+                    category: product.category,
                     name: product.name,
                     description: product.description,
                     price: priceRange || 'N/A', // Khoảng giá hoặc N/A nếu không có biến thể
