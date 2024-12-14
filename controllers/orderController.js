@@ -82,7 +82,9 @@ exports.createOrder = async (req, res) => {
             if (result.message) {
                 res.status(result.status).json({ message: result.message });
             } else {
-                res.status(result.status).json({id_order: result.id_order});
+                res.status(result.status).json({
+                    id_order: result.id_order,
+                    amount: result.amount});
             }
         }
     } catch (err) {
