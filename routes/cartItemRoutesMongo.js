@@ -25,7 +25,7 @@ router.put('/cartItems/delete', authenticateToken, deleteCartItems);
 //Route check sản phẩm có hợp lệ trc khi chuyển qua thanh toán
 router.post("/cartItems/verify2", authenticateToken, verifyCart2);
 
-router.post("/cartItems/verify", authenticateToken, verifyCart);
+router.get("/cartItems/verify", authenticateToken, verifyCart);
 //Route check stock (ko cần dùng)
 router.get("/cartItems/checkStock", authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
