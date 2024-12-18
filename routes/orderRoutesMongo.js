@@ -5,7 +5,7 @@ const router = express.Router();
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { getOrder, getOrderDetail, createOrder, getOrderItems,
-        webGetOrder, buyNow
+        webGetOrder, buyNow, getOrderMobile
  } = require("../controllers/orderController");
 
 // Lấy danh sách đơn hàng của 1 user
@@ -20,5 +20,6 @@ router.get('/orders/user/items', authenticateToken, getOrderItems);
 router.get('/orders/user/details', authenticateToken, webGetOrder);
 // Mua ngay
 router.post('/orders/buyNow', authenticateToken, buyNow);
-
+// Lấy danh sách đơn hàng của 1 user
+router.get('/orders/user/mobile', authenticateToken, getOrderMobile);
 module.exports = router;

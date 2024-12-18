@@ -1,4 +1,4 @@
-const { client } = require("../db");
+const { getClient } = require("../db");
 const cloudinary = require('cloudinary').v2;
 const { v4: uuidv4 } = require('uuid');
 
@@ -22,7 +22,7 @@ async function updateAvatarUser(userId, imagePath) {
         const imageUrl = result.secure_url;
 
         // Truy cập MongoDB và tìm người dùng
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const usersCollection = db.collection('users');
 
@@ -60,7 +60,7 @@ async function updatePetImage(imagePath, id_product) {
         const imageUrl = result.secure_url;
 
         // Truy cập MongoDB và tìm sản phẩm pet
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const productsCollection = db.collection('products');
 
@@ -98,7 +98,7 @@ async function updateFoodImage(imagePath, id_product) {
         const imageUrl = result.secure_url;
 
         // Truy cập MongoDB và tìm sản phẩm pet
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const productsCollection = db.collection('products');
 
@@ -136,7 +136,7 @@ async function updateSuppliesImage(imagePath, id_product) {
         const imageUrl = result.secure_url;
 
         // Truy cập MongoDB và tìm sản phẩm pet
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const productsCollection = db.collection('products');
 

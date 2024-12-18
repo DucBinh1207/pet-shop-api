@@ -126,7 +126,6 @@ exports.getComment = async (productId, page = 1, limit = 10) => {
     }
 };
 
-
 exports.deleteComment = async (commentId, userId) => {
     try {
         const client = getClient();
@@ -164,6 +163,89 @@ exports.deleteComment = async (commentId, userId) => {
             status: 500,
             message: "Internal server error",
             error: error
+        };
+    }
+};
+
+exports.getTopComment = async () => {
+    try {
+        const client = getClient();
+        const db = client.db("PBL6");
+        const commentsCollection = db.collection("comments");
+        const usersCollection = db.collection("users");
+
+        // Lấy tối đa 5 comments có số đánh giá cao nhất
+        const topComments = await commentsCollection
+            .find({}) // Không lọc theo sản phẩm
+            .sort({ star: -1 }) // Sắp xếp theo rating giảm dần
+            .limit(5) // Giới hạn chỉ lấy 5 bình luận
+            .toArray();
+
+        // Kiểm tra nếu không có bình luận
+        if (topComments.length === 0) {
+            return {
+                status: 200,
+                message: "No comments found",
+                enrichedComments: [],
+            };
+        }
+
+        // Lấy thông tin user tương ứng cho mỗi comment
+        const enrichedComments = await Promise.all(topComments.map(async (comment) => {
+            const user = await usersCollection.findOne({ _id: comment.userId });
+            return new EnrichedComment(comment, user);
+        }));
+
+        // Trả về danh sách comment đã được làm giàu dữ liệu user
+        return {
+            status: 200,
+            enrichedComments,
+        };
+    } catch (err) {
+        console.error("Error fetching top comments:", err);
+        return {
+            status: 500,
+            message: "Internal server error",
+        };
+    }
+};
+
+exports.getCommentMobile = async (productId, page = 1, limit = 10) => {
+    try {
+        const client = getClient();
+        const db = client.db("PBL6");
+        const commentsCollection = db.collection("comments");
+        const usersCollection = db.collection("users");
+
+        // Lấy các comments có id_product tương ứng từ database với phân trang
+        const comments = await commentsCollection
+            .find({ id_product: productId })
+            .toArray();
+
+        // Kiểm tra nếu không có bình luận
+        if (comments.length === 0) {
+            return {
+                status: 200,
+            };
+        }
+
+        // Lấy thông tin user tương ứng cho mỗi comment
+        const enrichedComments = await Promise.all(comments.map(async (comment) => {
+            const user = await usersCollection.findOne({ _id: comment.userId });
+            return new EnrichedComment(comment, user);
+        }));
+
+        // Trả về danh sách comment đã được làm giàu dữ liệu user và thông tin phân trang
+        return {
+            status: 200,
+            enrichedComments,
+
+        };
+    } catch (err) {
+        console.error("Error fetching comments:", err);
+        return {
+            status: 500,
+            message: "Internal server error"
         };
     }
 };

@@ -194,7 +194,7 @@ router.put('/user/avatar', authenticateToken, upload.single('image'), async (req
 
         if (updateResult.success) {
             // Trả về kết quả thành công
-            return res.status(200).json();
+            return res.status(200).json({imageUrl:updateResult.imageUrl});
         } else {
             return res.status(500).json({ message: updateResult.message });
         }

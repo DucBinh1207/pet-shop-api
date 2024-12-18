@@ -50,3 +50,7 @@ exports.webGetOrder = async (id_order) => {
 exports.buyNow = async (userId, product_variant_id, category, quantity) => {
     return await orderDAO.buyNow(userId, product_variant_id, category, quantity);
 };
+
+exports.getOrderMobile = async (id_user) => {
+    return await orderDAO.getOrderMobile(id_user);
+};

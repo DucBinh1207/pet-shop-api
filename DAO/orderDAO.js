@@ -28,8 +28,7 @@ exports.getOrder = async (id_user) => {
 
         if (orders.length === 0) {
             return {
-                status: 404,
-                message: 'Không có đơn hàng nào'
+                status: 200,
             };
         }
         const customOrders = orders.map(order => new Order(order));
@@ -46,7 +45,7 @@ exports.getOrder = async (id_user) => {
         };
     }
 };
-
+//Mobile xai`
 exports.getOrderDetail = async (id_order) => {
     try {
         const client = getClient();
@@ -337,7 +336,7 @@ exports.createOrder = async (
         };
     }
 };
-
+//Mobile xai`
 exports.getOrderItems = async (id_order) => {
     try {
         const client = getClient();
@@ -590,3 +589,36 @@ exports.buyNow = async (userId, product_variant_id, category, quantity) => {
         };
     }
 }
+
+exports.getOrderMobile = async (id_user) => {
+    try {
+        const client = getClient();
+        const db = client.db("PBL6");
+        const ordersCollection = db.collection('orders'); // Truy cập vào collection 'orders'
+
+        // Truy vấn các đơn hàng của user từ MongoDB
+        const orders = await ordersCollection
+            .find({ id_user: id_user, status: { $ne: 0 } })
+            .sort({ date: -1 }) // Sắp xếp giảm dần theo createdAt (mới nhất lên đầu)
+            .toArray();
+
+        if (orders.length === 0) {
+            return {
+                status: 404,
+                message: 'Không có đơn hàng nào'
+            };
+        }
+        const customOrders = orders.map(order => new Order(order));
+
+        return {
+            status: 200,
+            customOrders
+        };
+    } catch (err) {
+        console.error("Lỗi khi lấy đơn hàng:", err);
+        return {
+            status: 500,
+            message: 'Internal server error'
+        };
+    }
+};

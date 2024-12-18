@@ -12,3 +12,11 @@ exports.getComment = async (productId, page, limit) => {
 exports.deleteComment = async (commentId, userId) => {
     return await commentDAO.deleteComment(commentId, userId);
 };
+
+exports.getTopComment = async () => {
+    return await commentDAO.getTopComment();
+};
+
+exports.getCommentMobile = async (productId) => {
+    return await commentDAO.getCommentMobile(productId);
+};
