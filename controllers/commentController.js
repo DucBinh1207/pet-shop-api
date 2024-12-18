@@ -76,3 +76,52 @@ exports.deleteComment = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
+exports.getTopComment = async (req, res) => {
+    try {
+        const result = await commentBO.getTopComment();
+
+        if (result.status === 500) {
+            res.status(result.status).json({ message: result.message, error: result.error });
+        } else {
+            if (result.message) {
+                res.status(result.status).json({
+                    currentPage: result.currentPage,
+                    totalPages: result.totalPages,
+                    limit: result.limit
+                });
+            } else {
+                res.status(result.status).json({
+                    comments: result.enrichedComments,
+                });
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        // Lỗi server
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+exports.getCommentMobile = async (req, res) => {
+    const productId = req.params.id_product;
+    try {
+        const result = await commentBO.getCommentMobile(productId);
+
+        if (result.status === 500) {
+            res.status(result.status).json({ message: result.message, error: result.error });
+        } else {
+            if (result.message) {
+                res.status(result.status).json();
+            } else {
+                res.status(result.status).json(
+                    result.enrichedComments,
+                );
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        // Lỗi server
+        res.status(500).json({ message: "Internal server error" });
+    }
+}

@@ -161,3 +161,24 @@ exports.buyNow = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }
+
+exports.getOrderMobile = async (req, res) => {
+    const id_user = req.user.userId; // Lấy id_user từ token
+    try {
+        const result = await orderBO.getOrderMobile(id_user);
+
+        if (result.status === 500) {
+            res.status(result.status).json({ message: result.message, error: result.error });
+        } else {
+            if (result.message) {
+                res.status(result.status).json({ message: result.message });
+            } else {
+                res.status(result.status).json(result.customOrders);
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        // Lỗi server
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
