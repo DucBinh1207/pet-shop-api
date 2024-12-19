@@ -85,6 +85,54 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
     }
 });
 
+router.put("/admin/orders/status", authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
+
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2) { // Chỉ admin được phép truy cập
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+
+    const { id, status } = req.body;
+
+    // Kiểm tra dữ liệu đầu vào
+    if (!id || status === undefined) {
+        console.log("Vui lòng cung cấp đầy đủ id và status");
+        return res.status(400).json();
+    }
+
+    try {
+        const parsedStatus = parseInt(status, 10);
+        if (isNaN(parsedStatus)) {
+            console.log("Status phải là một số nguyên hợp lệ");
+            return res.status(400).json();
+        }
+
+        // Kết nối đến MongoDB
+        const client = getClient();
+        const db = client.db("PBL6");
+        const ordersCollection = db.collection("orders");
+
+        // Tìm đơn hàng
+        const order = await ordersCollection.findOne({ _id: id });
+
+        if (!order) {
+            console.log("Không tìm thấy đơn hàng với ID đã cung cấp");
+            return res.status(400).json();
+        }
+
+        // Cập nhật trạng thái đơn hàng
+        await ordersCollection.updateOne(
+            { _id: id },
+            { $set: { status: parsedStatus } }
+        );
+
+        res.status(200).json();
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        res.status(500).json({ message: "Lỗi máy chủ. Vui lòng thử lại sau." });
+    }
+});
 
 
 

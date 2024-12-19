@@ -15,6 +15,7 @@ const adminCartRoutes = require("./admin/cartRoutes");
 const adminOrdersRoutes = require("./admin/orderRoutes");
 const adminIncomeRoutes = require("./admin/incomeRoutes");
 const vouchersRoutes = require("./admin/voucherRoutes");
+const commentsRoutes = require("./admin/commentRoutes");
 const { connectToDB, closeDBConnection } = require("./db");
 
 const listenForExpirationEvents = require("./middleware/redisSubscriber");
@@ -92,6 +93,7 @@ app.use("/api", adminCartRoutes);
 app.use("/api", adminOrdersRoutes);
 app.use("/api", adminIncomeRoutes);
 app.use("/api", vouchersRoutes);
+app.use("/api", commentsRoutes);
 
 app.use(express.static("public"));
 

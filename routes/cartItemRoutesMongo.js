@@ -30,8 +30,6 @@ router.get("/cartItems/verify", authenticateToken, verifyCart);
 router.get("/cartItems/checkStock", authenticateToken, async (req, res) => {
     const userId = req.user.userId; // Lấy id_user từ token
     try {
-        await client.connect();
-
         // Nếu kiểm tra thành công, giữ hàng trong Redis
         const checkReserveStock = await checkReservedStock(userId);
         if (!checkReserveStock.success) {
