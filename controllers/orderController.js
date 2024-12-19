@@ -42,15 +42,12 @@ exports.getOrderDetail = async (req, res) => {
     }
 }
 
-exports.createOrder = async (req, res) => {
+exports.createOrder2 = async (req, res) => {
     const id_user = req.user.userId;
     const {
         name,
         telephone_number,
         email,
-        total_price,
-        shipping_price,
-        subtotal_price,
         province,
         district,
         ward,
@@ -60,14 +57,11 @@ exports.createOrder = async (req, res) => {
         note
     } = req.body;
     try {
-        const result = await orderBO.createOrder(
+        const result = await orderBO.createOrder2(
             id_user,
             name,
             telephone_number,
             email,
-            total_price,
-            shipping_price,
-            subtotal_price,
             province,
             district,
             ward,
@@ -174,6 +168,52 @@ exports.getOrderMobile = async (req, res) => {
                 res.status(result.status).json({ message: result.message });
             } else {
                 res.status(result.status).json(result.customOrders);
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        // Lỗi server
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+exports.createOrder = async (req, res) => {
+    const id_user = req.user.userId;
+    const {
+        name,
+        telephone_number,
+        email,
+        province,
+        district,
+        ward,
+        street,
+        voucher_code,
+        payment_method,
+        note
+    } = req.body;
+    try {
+        const result = await orderBO.createOrder2(
+            id_user,
+            name,
+            telephone_number,
+            email,
+            province,
+            district,
+            ward,
+            street,
+            voucher_code,
+            payment_method,
+            note);
+
+        if (result.status === 500) {
+            res.status(result.status).json({ message: result.message, error: result.error });
+        } else {
+            if (result.message) {
+                res.status(result.status).json({ message: result.message });
+            } else {
+                res.status(result.status).json({
+                    id_order: result.id_order,
+                    amount: result.amount});
             }
         }
     } catch (err) {

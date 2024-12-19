@@ -126,37 +126,36 @@ router.get("/admin/income/products/soldNumber", authenticateToken, async (req, r
             })
             .toArray();
 
-        // Nhóm theo id_product và tính tổng quantity
-        const productSoldData = {};
+        // Nhóm theo category và tính tổng quantity
+        const categorySalesData = {};
 
         orderItems.forEach((item) => {
-            const productId = item.option.id_product;
-            const productName = item.option.name;
+            const category = item.category;
+            const name = item.id_order;
+            //console.log({name});
             const quantity = parseInt(item.quantity, 10); // Chuyển quantity về số
 
-            // Nhóm theo id_product và cộng quantity
-            if (!productSoldData[productId]) {
-                productSoldData[productId] = {
-                    id: productId,
-                    name: productName,
+            // Nhóm theo category và cộng tổng quantity
+            if (!categorySalesData[category]) {
+                categorySalesData[category] = {
+                    category: category,
                     soldQuantity: 0,
                 };
             }
-            productSoldData[productId].soldQuantity += quantity;
+            categorySalesData[category].soldQuantity += quantity;
         });
 
         // Chuyển dữ liệu nhóm sang dạng mảng
-        const result = Object.values(productSoldData); // Chỉ lấy các giá trị từ object
+        const result = Object.values(categorySalesData); // Chỉ lấy các giá trị từ object
 
         res.status(200).json({
-            details: result,
+            soldQuantity: result,
         });
     } catch (error) {
         console.error("Error calculating sold products:", error);
         res.status(500).json({ message: "Lỗi máy chủ", error });
-    } finally {
     }
-}
-);
+});
+
 
 module.exports = router;

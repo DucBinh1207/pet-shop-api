@@ -408,7 +408,7 @@ exports.webGetOrder = async (id_order) => {
         const ordersCollection = db.collection('orders'); // Truy cập collection "orders"
         const orderItemsCollection = db.collection('order_items'); // Truy cập collection "order_items"
         const vouchersCollection = db.collection('vouchers');
-        
+
         // Tìm kiếm đơn hàng dựa trên id_order trong MongoDB
         const order = await ordersCollection.findOne({ _id: id_order });
 
@@ -619,6 +619,293 @@ exports.getOrderMobile = async (id_user) => {
         return {
             status: 500,
             message: 'Internal server error'
+        };
+    }
+};
+
+exports.createOrder2 = async (
+    id_user,
+    name,
+    telephone_number,
+    email,
+    province,
+    district,
+    ward,
+    street,
+    voucher_code,
+    payment_method,
+    note) => {
+    const cartKey = process.env.PREFIX_RESERVED_STOCK + id_user;
+    const cartKeyLater = process.env.PREFIX_RESERVED_STOCK_LATER + id_user;
+    try {
+        // Kiểm tra dữ liệu đầu vào
+        const missingFields = [];
+        if (!name) missingFields.push('name');
+        if (!telephone_number) missingFields.push('telephone_number');
+        if (!email) missingFields.push('email');
+        if (!province) missingFields.push('province');
+        if (!district) missingFields.push('district');
+        if (!ward) missingFields.push('ward');
+        if (!street) missingFields.push('street');
+        if (!payment_method) missingFields.push('payment_method');
+
+        if (missingFields.length > 0) {
+            console.log("Các trường bị thiếu:", missingFields.join(', '));
+            return {
+                status: 400,
+                message: `Các trường bị thiếu: ${missingFields.join(', ')}`
+            };
+        }
+        const client = getClient();
+        const db = client.db("PBL6");
+        const ordersCollection = db.collection('orders');
+        const vouchersCollection = db.collection('vouchers');
+
+        let discountPercent = 0;
+        if (voucher_code) {
+            console.log({voucher_code});
+            const voucher = await vouchersCollection.findOne({ code: voucher_code, status: 1 });
+            if (!voucher) {
+                console.log("Voucher không tồn tại");
+                return {
+                    status: 400,
+                };
+            }
+            if (voucher.quantity <= 0) {
+                console.log("Voucher đã hết");
+                return {
+                    status: 400,
+                };
+            }
+            // Trừ 1 số lượng voucher
+            await vouchersCollection.updateOne(
+                { code: voucher_code },
+                { $inc: { quantity: -1 } }
+            );
+            console.log("Đã trừ số lượng voucher");
+            discountPercent = parseFloat(voucher.percent);
+            console.log({discountPercent});
+        }
+
+        let products;
+        // Kiểm tra xem có dữ liệu trong Redis hay không
+        const exists = await redis.exists(cartKey);
+        if (exists) {
+            // Lấy dữ liệu từ Redis
+            const reservedStockData = await redis.get(cartKey);
+            products = JSON.parse(reservedStockData); // Giả sử dữ liệu lưu dưới dạng JSON
+
+            if (!products || products.length === 0) {
+                console.log("Không có sản phẩm nào trong giỏ hàng");
+                return {
+                    status: 400,
+                    message: "Không có sản phẩm nào trong giỏ hàng"
+                };
+            }
+            console.log("Dữ liệu giỏ hàng:", products);
+
+            // Xóa key cũ sau khi lấy dữ liệu
+            await redis.del(cartKey);
+        } else {
+            console.log("Hết thời gian giữ hàng");
+            return {
+                status: 400,
+                message: "Hết thời gian giữ hàng"
+            };
+        }
+
+        // Xóa dữ liệu giữ hàng tạm (cartKeyLater)
+        await redis.del(cartKeyLater);
+
+        const orderItemsCollection = db.collection('order_items');
+        const paymentsCollection = db.collection('payments');
+
+        // Tạo orderItems và tính subtotal_price
+        let subtotal_price = 0;
+        const orderItems2 = await Promise.all(
+            products.map(async (product) => {
+                let price = 0;
+
+                // Lấy thông tin chi tiết sản phẩm dựa trên category
+                if (product.category === "pets") {
+                    const pet = await db.collection("pets").findOne({ _id: product.product_variant_id });
+                    if (pet) {
+                        price = pet.price;
+                    }
+                } else if (product.category === "foods") {
+                    const food = await db.collection("foods").findOne({ _id: product.product_variant_id });
+                    if (food) {
+                        price = food.price;
+                    }
+                } else if (product.category === "supplies") {
+                    const supplies = await db.collection("supplies").findOne({ _id: product.product_variant_id });
+                    if (supplies) {
+                        price = supplies.price;
+                    }
+                }
+                // Tính tổng tiền từng sản phẩm
+                subtotal_price += price * product.quantity;
+            })
+        );
+
+        // Xử lý shipping_price dựa trên subtotal_price
+        let shipping_price = 0;
+        if (subtotal_price > 5000000) {
+            shipping_price = 0;
+        } else if (subtotal_price >= 2000000) {
+            shipping_price = 200000;
+        } else if (subtotal_price >= 500000) {
+            shipping_price = 100000;
+        } else if (subtotal_price >= 200000) {
+            shipping_price = 80000;
+        } else {
+            shipping_price = 50000;
+        }
+        
+        subtotal_price = subtotal_price * (1 - discountPercent / 100);
+
+        // Tính total_price
+        const total_price = subtotal_price + shipping_price;
+
+        // Lưu order vào MongoDB
+        const newOrder = {
+            _id: Date.now().toString(),
+            id_user: id_user,
+            name: name,
+            telephone_number: telephone_number,
+            email: email,
+            total_price: total_price,
+            shipping_price: shipping_price,
+            subtotal_price: subtotal_price,
+            date: new Date(),
+            province: province,
+            district: district,
+            ward: ward,
+            street: street,
+            voucher_code: voucher_code || null,
+            payment_method: payment_method,
+            note: note || null,
+            status: 5,
+        };
+        const orderResult = await ordersCollection.insertOne(newOrder);
+        const id_order = orderResult.insertedId;
+
+        if (!Array.isArray(products)) {
+            if (typeof products === 'object') {
+                products = [products];
+            } else {
+                console.log("Dữ liệu không hợp lệ:", products);
+                return {
+                    status: 400,
+                    message: "Dữ liệu không hợp lệ"
+                };
+            }
+        }
+        console.log("Dữ liệu giỏ hàng sau khi chuyển:", products);
+
+        const orderItems = await Promise.all(
+            products.map(async (product) => {
+                let option = {};
+
+                // Lấy thông tin chi tiết sản phẩm dựa trên category
+                if (product.category === "pets") {
+                    const pet = await db.collection("pets").findOne({ _id: product.product_variant_id });
+                    const productInfo = await db.collection("products").findOne({ _id: pet.id_product });
+                    if (pet && productInfo) {
+                        option = {
+                            id_product: productInfo._id,
+                            name: productInfo.name,
+                            price: pet.price,
+                        };
+                        // Tăng sold
+                        await db.collection("products").updateOne(
+                            { _id: pet.id_product },
+                            { $inc: { sold: product.quantity } }
+                        );
+                    }
+                } else if (product.category === "foods") {
+                    const food = await db.collection("foods").findOne({ _id: product.product_variant_id });
+                    const productInfo = await db.collection("products").findOne({ _id: food.id_product });
+                    if (food) {
+                        option = {
+                            id_product: productInfo._id,
+                            name: productInfo.name,
+                            ingredient: food.ingredient,
+                            weight: food.weight,
+                            price: food.price,
+                        };
+                        // Tăng sold
+                        await db.collection("products").updateOne(
+                            { _id: food.id_product },
+                            { $inc: { sold: product.quantity } }
+                        );
+                    }
+                } else if (product.category === "supplies") {
+                    const supplies = await db.collection("supplies").findOne({ _id: product.product_variant_id });
+                    const productInfo = await db.collection("products").findOne({ _id: supplies.id_product });
+                    if (supplies) {
+                        option = {
+                            id_product: productInfo._id,
+                            name: productInfo.name,
+                            color: supplies.color,
+                            size: supplies.size,
+                            price: supplies.price,
+                        };
+                        // Tăng sold
+                        await db.collection("products").updateOne(
+                            { _id: supplies.id_product },
+                            { $inc: { sold: product.quantity } }
+                        );
+                    }
+                }
+
+                // Trả về một object order_item
+                return {
+                    id_order: id_order.toString(),
+                    category: product.category,
+                    quantity: product.quantity,
+                    option: option,
+                };
+            })
+        );
+
+        // Lưu tất cả order_items vào MongoDB
+        await orderItemsCollection.insertMany(orderItems);
+        console.log("Đã thêm order items với option");
+
+        // Xóa cartItems có product_variant_id tương ứng trong bảng cart_items
+        const productVariantIds = products.map(product => product.product_variant_id);
+        await db.collection('cart_items').deleteMany({ product_variant_id: { $in: productVariantIds } });
+        console.log("Đã xóa các cart items");
+
+        // Tạo bản ghi payment mới trong collection `payments`
+        const newPayment = {
+            _id: Date.now().toString(),
+            id_order: id_order.toString(),
+            date_created: new Date(),
+            payment_at: null,
+            amount: total_price,
+            method: payment_method,
+            status: 2
+        };
+        // 1: Thanh toán thành công
+        // 2: Chờ thanh toán
+        // 3: Thanh toán thất bại
+        await paymentsCollection.insertOne(newPayment);
+        console.log("Đã tạo bản ghi payment");
+
+        return {
+            status: 201,
+            id_order: id_order.toString(),
+            amount: total_price
+        };
+
+    } catch (error) {
+        console.error('Lỗi tạo order', error);
+        return {
+            status: 500,
+            message: "Lỗi máy chủ",
+            error
         };
     }
 };

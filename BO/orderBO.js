@@ -54,3 +54,27 @@ exports.buyNow = async (userId, product_variant_id, category, quantity) => {
 exports.getOrderMobile = async (id_user) => {
     return await orderDAO.getOrderMobile(id_user);
 };
+
+exports.createOrder2 = async (id_user,
+    name,
+    telephone_number,
+    email,
+    province,
+    district,
+    ward,
+    street,
+    voucher_code,
+    payment_method,
+    note) => {
+    return await orderDAO.createOrder2(id_user,
+        name,
+        telephone_number,
+        email,
+        province,
+        district,
+        ward,
+        street,
+        voucher_code,
+        payment_method,
+        note);
+};
