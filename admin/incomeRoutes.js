@@ -81,7 +81,7 @@ router.get("/admin/income/orders", authenticateToken, async (req, res) => {
     }
 });
 
-router.get("/admin/income/products/soldNumber", authenticateToken, async (req, res) => {
+router.get("/admin/income/categories", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền admin
@@ -131,25 +131,27 @@ router.get("/admin/income/products/soldNumber", authenticateToken, async (req, r
 
         orderItems.forEach((item) => {
             const category = item.category;
-            const name = item.id_order;
+
             //console.log({name});
             const quantity = parseInt(item.quantity, 10); // Chuyển quantity về số
-
+            const price = parseInt(item.option.price, 10);
             // Nhóm theo category và cộng tổng quantity
             if (!categorySalesData[category]) {
                 categorySalesData[category] = {
                     category: category,
                     soldQuantity: 0,
+                    income: 0,
                 };
             }
             categorySalesData[category].soldQuantity += quantity;
+            categorySalesData[category].income += quantity*price;
         });
 
         // Chuyển dữ liệu nhóm sang dạng mảng
         const result = Object.values(categorySalesData); // Chỉ lấy các giá trị từ object
 
         res.status(200).json({
-            soldQuantity: result,
+            income: result,
         });
     } catch (error) {
         console.error("Error calculating sold products:", error);
@@ -157,5 +159,82 @@ router.get("/admin/income/products/soldNumber", authenticateToken, async (req, r
     }
 });
 
+router.get("/admin/income/topProduct", authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
 
+    // Kiểm tra quyền admin
+    if (id_role !== 2) {
+        return res.status(400).json({ message: "Bạn không có quyền truy cập" });
+    }
+
+    const startDateString = req.query.startDate; // Ngày bắt đầu từ client dưới dạng DD-MM-YY
+    const endDateString = req.query.endDate; // Ngày kết thúc từ client dưới dạng DD-MM-YY
+
+    // Hàm parse ngày từ DD-MM-YY thành đối tượng Date
+    const parseDate = (dateString) => {
+        const [day, month, year] = dateString.split("-");
+        const fullYear = `20${year}`;
+        return new Date(`${fullYear}-${month}-${day}`);
+    };
+
+    const startDate = parseDate(startDateString); // Chuyển đổi ngày bắt đầu
+    const endDate = parseDate(endDateString); // Chuyển đổi ngày kết thúc
+
+    try {
+        const client = getClient();
+        const db = client.db("PBL6");
+        const ordersCollection = db.collection("orders");
+        const orderItemsCollection = db.collection("order_items");
+
+        // Bước 1: Tìm các đơn hàng trong khoảng thời gian
+        const orders = await ordersCollection
+            .find({
+                status: { $ne: 0 }, // Lọc các đơn hàng có status khác 0
+                date: { $gte: startDate, $lte: endDate },
+            })
+            .toArray();
+
+        // Lấy id_order từ các đơn hàng
+        const orderIds = orders.map((order) => order._id);
+
+        // Bước 2: Tìm các bản ghi trong order_items với id_order đó
+        const orderItems = await orderItemsCollection
+            .find({
+                id_order: { $in: orderIds },
+            })
+            .toArray();
+
+        // Nhóm theo sản phẩm và tính tổng quantity
+        const productSalesData = {};
+
+        orderItems.forEach((item) => {
+            const productId = item.option.id_product;
+            const name = item.option.name;
+            const quantity = parseInt(item.quantity, 10); // Chuyển quantity về số
+
+            // Nhóm theo sản phẩm và cộng tổng quantity
+            if (!productSalesData[productId]) {
+                productSalesData[productId] = {
+                    productId: productId,
+                    name: name,
+                    soldQuantity: 0,
+                };
+            }
+            productSalesData[productId].soldQuantity += quantity;
+        });
+
+        // Chuyển dữ liệu nhóm sang dạng mảng và sắp xếp theo soldQuantity giảm dần
+        const sortedProductSales = Object.values(productSalesData).sort((a, b) => b.soldQuantity - a.soldQuantity);
+
+        // Lấy 10 sản phẩm bán chạy nhất
+        const topProducts = sortedProductSales.slice(0, 10);
+
+        res.status(200).json({
+            topProducts,
+        });
+    } catch (error) {
+        console.error("Error calculating top products:", error);
+        res.status(500).json({ message: "Lỗi máy chủ", error });
+    }
+});
 module.exports = router;
