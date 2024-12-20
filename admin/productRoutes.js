@@ -1006,5 +1006,75 @@ router.get('/admin/products/search', async (req, res) => {
 
     }
 });
+// Search sp trả về tất cả variation
+router.get('/admin/products/searchByName', async (req, res) => {
+    const name = req.query.name; // Lấy giá trị name từ query string
+
+    if (!name) {
+        return res.status(400).json({ message: 'Name query parameter is required' });
+    }
+
+    try {
+        const client = getClient();
+        const database = client.db("PBL6");
+        const productsCollection = database.collection('products');
+        const foodsCollection = database.collection('foods');
+        const suppliesCollection = database.collection('supplies');
+        const petsCollection = database.collection('pets');
+
+        const normalizeText = (text) =>
+            text
+                .normalize('NFD') // Phân tách Unicode
+                .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
+                .replace(/[^a-zA-Z0-9 ]/g, '') // Loại bỏ ký tự đặc biệt
+                .toLowerCase();
+
+        const normalizedSearch = normalizeText(name);
+
+        const filters = {
+            name: { $regex: new RegExp(normalizedSearch, 'i') }
+        };
+
+        const products = await productsCollection.find(filters).toArray();
+
+        const productVariants = [];
+
+        for (const product of products) {
+            let variants = [];
+
+            if (product.category === 'foods') {
+                variants = await foodsCollection.find({ id_product: product._id }).toArray();
+            } else if (product.category === 'supplies') {
+                variants = await suppliesCollection.find({ id_product: product._id }).toArray();
+            } else if (product.category === 'pets') {
+                const variant = await petsCollection.findOne({ id_product: product._id });
+                if (variant) {
+                    variants.push(variant);
+                }
+            }
+
+            for (const variant of variants) {
+                productVariants.push({
+                    product_variant_id: variant._id,
+                    name: product.name,
+                    category: product.category,
+                    stock: variant.quantity || variant.stock || 0,
+                    ingredient: variant.ingredient || '',
+                    weight: variant.weight || '',
+                    size: variant.size || '',
+                    color: variant.color || '',
+                    price: variant.price || 0
+                });
+            }
+        }
+
+        res.status(200).json(productVariants);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+
 
 module.exports = router;

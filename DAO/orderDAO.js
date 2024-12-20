@@ -663,7 +663,7 @@ exports.createOrder2 = async (
 
         let discountPercent = 0;
         if (voucher_code) {
-            console.log({voucher_code});
+            console.log({ voucher_code });
             const voucher = await vouchersCollection.findOne({ code: voucher_code, status: 1 });
             if (!voucher) {
                 console.log("Voucher không tồn tại");
@@ -684,7 +684,7 @@ exports.createOrder2 = async (
             );
             console.log("Đã trừ số lượng voucher");
             discountPercent = parseFloat(voucher.percent);
-            console.log({discountPercent});
+            console.log({ discountPercent });
         }
 
         let products;
@@ -761,7 +761,7 @@ exports.createOrder2 = async (
         } else {
             shipping_price = 50000;
         }
-        
+
         subtotal_price = subtotal_price * (1 - discountPercent / 100);
 
         // Tính total_price
