@@ -34,8 +34,8 @@ router.post('/admin/users/create', authenticateToken, upload.single('image'), as
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) { // Chỉ admin được phép tạo tài khoản
-        return res.status(400).json();
+    if (id_role !== 2) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     console.log("File:", req.file);
@@ -118,7 +118,11 @@ router.post('/admin/users/create', authenticateToken, upload.single('image'), as
 
 router.put('/admin/users/update', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
+    const currentUserId = req.user.userId;
 
+    if (id_role !== 2) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
     console.log("Body:", req.body);
 
     const {
@@ -136,10 +140,6 @@ router.put('/admin/users/update', authenticateToken, async (req, res) => {
         nationality,
     } = req.body;
 
-    // Kiểm tra xem người dùng có quyền chỉnh sửa thông tin người dùng không
-    if (id_role !== 2) {
-        return res.status(400).json();
-    }
 
     try {
         // Kết nối đến MongoDB
@@ -147,6 +147,17 @@ router.put('/admin/users/update', authenticateToken, async (req, res) => {
         const db = client.db("PBL6");
         const usersCollection = db.collection("users");
 
+        const userToUpdate = await usersCollection.findOne({ _id: id });
+        
+        if (!userToUpdate) {
+            return res.status(404).json({ message: "Người dùng không tồn tại" });
+        }
+
+        // Kiểm tra nếu người dùng hiện tại là admin và đang cố gắng cập nhật thông tin của admin khác
+        if (id_role === 2 && userToUpdate.id_role === 2 && currentUserId !== id) {
+            return res.status(403).json({ message: "Bạn không có quyền cập nhật thông tin của admin khác" });
+        }
+        
         // Tìm và cập nhật người dùng
         const updateData = {
             email,
@@ -195,8 +206,8 @@ router.put('/admin/users/avatar', authenticateToken, upload.single('image'), asy
         return res.status(400).json(); // Nếu không có file ảnh
     }
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) { // Chỉ admin được phép tạo tài khoản
-        return res.status(400).json();
+    if (id_role !== 2) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
     console.log("File:", req.file);
     console.log("Body:", req.body);
@@ -228,8 +239,8 @@ router.get('/admin/users/get', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) { // Chỉ admin được phép truy cập
-        return res.status(400).json({ message: 'Unauthorized access' });
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     console.log("Query Parameters:", req.query);
@@ -304,7 +315,7 @@ router.put('/admin/users/delete', authenticateToken, async (req, res) => {
 
     // Chỉ admin được phép thực hiện
     if (id_role !== 2) {
-        return res.status(400).json();
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     const { id_user } = req.body; // Lấy id_user từ body request
@@ -336,6 +347,34 @@ router.put('/admin/users/delete', authenticateToken, async (req, res) => {
         res.status(500).json({ message: 'An error occurred while deleting user' });
     } finally {
 
+    }
+});
+
+router.put('/admin/users/ban', authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(400).json({ message: 'Unauthorized access' });
+    }
+    const { userId } = req.body;
+    if (!userId) {
+        return res.status(400).json();
+    }
+    try{
+        const client = getClient();
+        const db = client.db("PBL6");
+        const usersCollection = db.collection("users");
+        const result = await usersCollection.updateOne(
+            { _id: userId },
+            { $set: { status: 2 } }
+        );
+        if (result.matchedCount === 0) {
+            return res.status(400).json();
+        }
+        console.log(`User with id ${userId} status updated to 2.`);
+        res.status(200).json();
+    }catch(error){
+        console.error('Error updating user status:', error);
+        res.status(500).json({ message: 'An error occurred while banning user' });
     }
 });
 

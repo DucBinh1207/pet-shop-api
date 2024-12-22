@@ -8,9 +8,9 @@ exports.getPet = async (category, breeds, sortBy,
 };
 
 exports.getFood = async (ingredient, weightQuery, sortBy,
-    minPrice, maxPrice, pet_type, page, limit) => {
+    minPrice, maxPrice, type, page, limit) => {
     return await productDAO.getFood(ingredient, weightQuery, sortBy,
-        minPrice, maxPrice, pet_type, page, limit);
+        minPrice, maxPrice, type, page, limit);
 };
 
 exports.getSupplies = async (category, sortBy, color, size, type,

@@ -1,12 +1,18 @@
 class OrderInfo {
     constructor(order, voucherInfo) {
+        let a = "a";
+        if(order.payment_method === 1) {
+            a = "Trả tiền khi nhận hàng";
+        }else{
+            a = "Chuyển khoản online";
+        }
         this.id = order._id;
         this.date_created = order.date;
         this.status = order.status;
         this.subtotal_price = order.subtotal_price;
         this.shipping_price = order.shipping_price;
         this.total_price = order.total_price;
-        this.payment_method = order.payment_method;
+        this.payment_method = a;
         this.note = order.note;
         this.name = order.name;
         this.telephone_number = order.telephone_number;

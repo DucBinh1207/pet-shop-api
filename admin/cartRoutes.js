@@ -11,7 +11,7 @@ router.get("/admin/cartItems", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) { // Chỉ admin được phép truy cập
+    if (id_role !== 2 && id_role !== 3) {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 

@@ -13,6 +13,7 @@ const {
 const Order = require('../BEAN/Order');
 const OrderInfo = require('../BEAN/OrderInfo ');
 const { getClient } = require("../db");
+const { parse } = require('dotenv');
 
 exports.getOrder = async (id_user) => {
     try {
@@ -87,7 +88,7 @@ exports.getOrderDetail = async (id_order) => {
         };
     }
 };
-
+//API mobile
 exports.createOrder = async (
     id_user,
     name,
@@ -179,7 +180,7 @@ exports.createOrder = async (
                 message: "Hết thời gian giữ hàng"
             };
         }
-
+        payment_method = (payment_method === "Trả tiền khi nhận hàng") ? 1 : 2;
         // Xóa dữ liệu giữ hàng tạm (cartKeyLater)
         await redis.del(cartKeyLater);
 
@@ -767,6 +768,9 @@ exports.createOrder2 = async (
         // Tính total_price
         const total_price = subtotal_price + shipping_price;
 
+        //Chuyen int payment_method
+        payment_method = parseInt(payment_method, 10);
+        
         // Lưu order vào MongoDB
         const newOrder = {
             _id: Date.now().toString(),

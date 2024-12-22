@@ -9,18 +9,19 @@ router.get("/admin/comments", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) { // Chỉ admin được phép truy cập
+    if (id_role !== 2 && id_role !== 3) {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     // Lấy giá trị `star` từ query
-    const { star, status } = req.query;
+    const { star, status, userId } = req.query;
 
     try {
         const client = getClient();
         const db = client.db("PBL6");
         const commentsCollection = db.collection("comments");
         const productsCollection = db.collection("products");
+        const usersCollection = db.collection("users");
 
         // Tạo bộ lọc
         let filter = {};
@@ -35,6 +36,9 @@ router.get("/admin/comments", authenticateToken, async (req, res) => {
             const parsedStatus = parseInt(status, 10);
             filter.status = parsedStatus;
         }
+        if (userId !== undefined) {
+            filter.userId = userId;
+        }
         // Lấy danh sách comments
         const comments = await commentsCollection
             .find(filter)
@@ -45,11 +49,13 @@ router.get("/admin/comments", authenticateToken, async (req, res) => {
         const resultComments = await Promise.all(
             comments.map(async (comment) => {
                 const product = await productsCollection.findOne({ _id: comment.id_product });
+                const user =  await usersCollection.findOne({ _id: comment.userId });
                 return {
                     id: comment._id,
                     userId: comment.userId,
+                    image: user.image || "null",
                     id_product: comment.id_product,
-                    product_name: product ? product.name : null, // Nếu không tìm thấy thì để null
+                    product_name: product ? product.name : "null",
                     star: comment.star,
                     content: comment.content,
                     status: comment.status,
@@ -71,7 +77,7 @@ router.put("/admin/comments/status", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) { // Chỉ admin được phép truy cập
+    if (id_role !== 2 && id_role !== 3) {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 

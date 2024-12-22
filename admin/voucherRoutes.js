@@ -10,8 +10,8 @@ router.get("/admin/vouchers", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền admin
-    if (id_role !== 2) {
-        return res.status(400).json({ message: "Bạn không có quyền truy cập" });
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     // Nhận các query từ client
@@ -73,8 +73,7 @@ router.get("/admin/vouchers", authenticateToken, async (req, res) => {
 
     }
 });
-
-
+// Create voucher
 router.post('/admin/vouchers/create', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
@@ -174,7 +173,7 @@ router.put('/admin/vouchers/delete', authenticateToken, async (req, res) => {
 
     // Chỉ admin được phép thực hiện
     if (id_role !== 2) {
-        return res.status(400).json();
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     const { id } = req.body; // Lấy id_user từ body request

@@ -98,7 +98,15 @@ async function loginUser(email, password) {
         user: null,
       };
     }
-
+    if (!user.status === 2) {
+      // User has been banned
+      return {
+        success: false,
+        message: "User has been banned.",
+        status: 400,
+        user: null,
+      };
+    }
     const hashedPassword = user.password;
     const status = user.status;
     const is_verified = user.is_verified;

@@ -40,12 +40,12 @@ exports.getFood = async (req, res) => {
     const sortBy = req.query.sortBy || 'default';
     const minPrice = parseFloat(req.query.minPrice) || 0;
     const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
-    const pet_type = req.query.pet_type || 'all';
+    const type = req.query.type || 'all';
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     try {
         const result = await productBO.getFood(ingredient, weightQuery, sortBy,
-            minPrice, maxPrice, pet_type, page, limit);
+            minPrice, maxPrice, type, page, limit);
 
         if (result.status === 500) {
             res.status(result.status).json({ message: result.message, error: result.error });
