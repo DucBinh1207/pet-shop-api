@@ -8,6 +8,7 @@ exports.getSuppliesDetail = async (productId) => {
         const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const suppliesCollection = database.collection('supplies');
+        const commentsCollection = database.collection("comments");
 
         // Fetch the product from the products collection
         const product = await productsCollection.findOne({ _id: productId });
@@ -18,7 +19,8 @@ exports.getSuppliesDetail = async (productId) => {
                 message: 'Product not found'
             };
         }
-
+        // Lấy số lượng bình luận có id_product = productId
+        const totalReview = await commentsCollection.countDocuments({ id_product: productId });
         // Fetch supplies linked to the product, ensuring status = 1
         const supplies = await suppliesCollection
             .find({ id_product: productId, status: 1 })
@@ -36,6 +38,7 @@ exports.getSuppliesDetail = async (productId) => {
             material: supplies[0]?.material || null, // Use the first variation for shared fields
             brand: supplies[0]?.brand || null,       // Use the first variation for shared fields
             type: supplies[0]?.type || null,         // Use the first variation for shared fields
+            totalReview: totalReview,
             variations_supplies: supplies.map(supply => ({
                 product_variant_id: supply._id,
                 color: supply.color,
@@ -68,6 +71,7 @@ exports.getFoodDetail = async (foodId) => {
         const database = client.db("PBL6");
         const foodsCollection = database.collection('foods');
         const productsCollection = database.collection('products');
+        const commentsCollection = database.collection("comments");
 
         // Lấy thông tin food theo ID
         const food = await foodsCollection.findOne({ id_product: foodId, status: 1 });
@@ -78,7 +82,8 @@ exports.getFoodDetail = async (foodId) => {
                 message: "Food không tồn tại hoặc đã bị ẩn"
             };
         }
-
+        // Lấy số lượng bình luận có id_product = productId
+        const totalReview = await commentsCollection.countDocuments({ id_product: foodId });
         // Lấy thông tin sản phẩm tương ứng
         const product = await productsCollection.findOne({ _id: food.id_product, status: 1 });
 
@@ -115,6 +120,8 @@ exports.getFoodDetail = async (foodId) => {
             nutrition_info: food.nutrition_info,
             expire_date: food.expire_date,
             brand: food.brand,
+            type: food.type,
+            totalReview: totalReview,
             variations_foods: variationsFood,
         };
 
@@ -139,6 +146,7 @@ exports.getPetDetail = async (petId) => {
         const database = client.db("PBL6");
         const petsCollection = database.collection('pets');
         const productsCollection = database.collection('products');
+        const commentsCollection = database.collection("comments");
 
         // Lấy thông tin pet theo ID
         const pet = await petsCollection.findOne({ id_product: petId, status: 1 });
@@ -149,6 +157,8 @@ exports.getPetDetail = async (petId) => {
                 message: "Pet không tồn tại hoặc đã bị ẩn"
             };
         }
+        // Lấy số lượng bình luận có id_product = productId
+        const totalReview = await commentsCollection.countDocuments({ id_product: petId });
 
         // Lấy thông tin sản phẩm tương ứng
         const product = await productsCollection.findOne({ _id: pet.id_product, status: 1 });
@@ -156,7 +166,7 @@ exports.getPetDetail = async (petId) => {
         if (!product) {
             return {
                 status: 404,
-                message: "Sản phẩm không tồn tại hoặc đã bị ẩn" 
+                message: "Sản phẩm không tồn tại hoặc đã bị ẩn"
             };
         }
 
@@ -194,6 +204,7 @@ exports.getPetDetail = async (petId) => {
             date_created: product.date_created,
             rating: product.rating,
             category: product.category,
+            totalReview: totalReview,
             variations_pets: variationsPets,
         };
 

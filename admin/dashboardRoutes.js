@@ -4,6 +4,13 @@ const router = express.Router();
 
 // Route to get dashboard statistics
 router.get('/admin/dashboard/summary', async (req, res) => {
+    const id_role = req.user.id_role;
+
+    // Kiểm tra quyền admin
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+
     try {
         console.log('Getting dashboard statistics');
         const client = getClient();

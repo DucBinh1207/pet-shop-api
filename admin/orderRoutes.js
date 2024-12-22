@@ -19,7 +19,7 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) { // Chỉ admin được phép truy cập
+    if (id_role !== 2 && id_role !== 3) {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
@@ -143,6 +143,12 @@ router.put("/admin/orders/status", authenticateToken, async (req, res) => {
 });
 
 router.post('/admin/orders/create', authenticateToken, upload.none(), async (req, res) => {
+    const id_role = req.user.id_role;
+    
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+    
     const {
         name,
         telephone_number,

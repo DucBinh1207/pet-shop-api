@@ -22,17 +22,30 @@ const config = {
 };
 // Payment route
 router.post("/payment", authenticateToken, async (req, res) => {
-    const { id_order, amount } = req.body;
+    const { id_order} = req.body;
 
     const embed_data = {
         redirecturl: `https://pet-shop-test-deploy.vercel.app/cart/order-success?id_order=${id_order}`
     };
 
     // Kiểm tra xem id_order và amount có tồn tại hay không
-    if (!id_order || !amount) {
-        return res.status(400).json({ error: "id_order and amount are required" });
+    if (!id_order) {
+        return res.status(400).json({ error: "id_order is required" });
     }
-
+    let amount = 0;
+    try {
+        const client = getClient();
+        const db = client.db("PBL6");
+        const ordersCollection = db.collection("orders");
+        const order = await ordersCollection.findOne({ _id: id_order });
+        if (!order) {
+            return res.status(404).json({ error: "Order not found" });
+        }
+        amount = order.total_price;
+    } catch (error) {
+        console.error("Lỗi khi lấy thông tin đơn hàng:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
     const items = [{}];
     const transID = Math.floor(Math.random() * 1000000);
     const transID_new = `${moment().format("YYMMDD")}_${transID}`;
@@ -46,7 +59,7 @@ router.post("/payment", authenticateToken, async (req, res) => {
         amount: amount, // Số tiền được nhận từ yêu cầu
         description: `Pet Shop - Payment for order #${id_order}`, // Mô tả đơn hàng với id_order
         bank_code: "",
-        callback_url: "https://29fe-171-251-17-143.ngrok-free.app/api/callback",
+        callback_url: "https://pet-shop-api-2zab.onrender.com/api/callback",
     };
 
     const data =
@@ -116,7 +129,7 @@ router.post("/callback", async (req, res) => {
 async function updatePaymentStatus(app_trans_id) 
 {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const paymentsCollection = db.collection("payments");
         // Tìm và cập nhật bản ghi có id_order
@@ -149,7 +162,7 @@ async function updatePaymentStatus(app_trans_id)
 // Lưu trans_id vào payment
 async function saveTransID(app_trans_id, id_order) {
     try {
-        await client.connect();
+        const client = getClient();
         const db = client.db("PBL6");
         const paymentsCollection = db.collection("payments");
         // Tìm và cập nhật bản ghi có id_order
@@ -202,9 +215,7 @@ router.put("/updateStatus", authenticateToken, async (req, res) => {
     }
 
     try {
-        await client.connect();
-        console.log("Connected to MongoDB");
-
+        const client = getClient();
         const db = client.db("PBL6");
         const paymentsCollection = db.collection("payments");
 

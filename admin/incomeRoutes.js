@@ -9,8 +9,8 @@ router.get("/admin/income/orders", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền admin
-    if (id_role !== 2) {
-        return res.status(400).json({ message: "Bạn không có quyền truy cập" });
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     // Nhận query từ client
@@ -85,8 +85,8 @@ router.get("/admin/income/categories", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền admin
-    if (id_role !== 2) {
-        return res.status(400).json({ message: "Bạn không có quyền truy cập" });
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     const startDateString = req.query.startDate; // Ngày bắt đầu từ client dưới dạng DD-MM-YY
@@ -163,8 +163,8 @@ router.get("/admin/income/topProduct", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền admin
-    if (id_role !== 2) {
-        return res.status(400).json({ message: "Bạn không có quyền truy cập" });
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     const startDateString = req.query.startDate; // Ngày bắt đầu từ client dưới dạng DD-MM-YY

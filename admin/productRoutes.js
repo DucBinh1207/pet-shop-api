@@ -34,7 +34,7 @@ router.post('/admin/products/create', authenticateToken, upload.single('image'),
 
     // Kiểm tra quyền truy cập
     if (id_role !== 2) {
-        return res.status(400).json();
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     const { nameTag } = req.body;
@@ -175,7 +175,7 @@ router.put('/admin/products/update', authenticateToken, upload.none(), async (re
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập
     if (id_role !== 2) {
-        return res.status(400).json();
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
     const { nameTag } = req.body;
     console.log("Body:", req.body);
@@ -321,7 +321,7 @@ router.put('/admin/products/delete', authenticateToken, async (req, res) => {
 
     // Kiểm tra quyền truy cập
     if (id_role !== 2) {
-        return res.status(400).json();
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
     console.log("Body:", req.body);
 
@@ -390,7 +390,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
 
     // Kiểm tra quyền truy cập
     if (id_role !== 2) {
-        return res.status(400).json();
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
     const {
         category,
@@ -464,8 +464,8 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
 router.get('/admin/products/pets', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) {
-        return res.status(400).json();
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
 
@@ -576,8 +576,8 @@ router.get('/admin/products/pets', authenticateToken, async (req, res) => {
 router.get('/admin/products/foods', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập
-    if (id_role !== 2) {
-        return res.status(400).json();
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
     try {
@@ -756,6 +756,12 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
 });
 // Get supplies
 router.get('/admin/products/supplies', async (req, res) => {
+    const id_role = req.user.id_role;
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+
     try {
         const client = getClient();
         const database = client.db("PBL6");
@@ -918,6 +924,12 @@ router.get('/admin/products/supplies', async (req, res) => {
 });
 // Search sp
 router.get('/admin/products/search', async (req, res) => {
+    const id_role = req.user.id_role;
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+
     const name = req.query.name; // Lấy giá trị name từ query string
 
     if (!name) {
@@ -1008,6 +1020,12 @@ router.get('/admin/products/search', async (req, res) => {
 });
 // Search sp trả về tất cả variation
 router.get('/admin/products/searchByName', async (req, res) => {
+    const id_role = req.user.id_role;
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+    
     const name = req.query.name; // Lấy giá trị name từ query string
 
     if (!name) {

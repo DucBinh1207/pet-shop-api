@@ -1,5 +1,6 @@
 const express = require('express');
 const { getClient } = require("../db");
+const { ObjectId } = require('mongodb');
 
 exports.getPet = async (category, breeds, sortBy,
     minPrice, maxPrice, page, limit) => {
@@ -118,14 +119,13 @@ exports.getPet = async (category, breeds, sortBy,
 };
 
 exports.getFood = async (ingredient, weightQuery, sortBy,
-    minPrice, maxPrice, pet_type, page, limit) => {
+    minPrice, maxPrice, type, page, limit) => {
     try {
         const client = getClient();
         const database = client.db("PBL6");
         const productsCollection = database.collection('products');
         const foodsCollection = database.collection('foods');
 
-        console.log({ pet_type });
         // Build filters for foods
         let foodFilters = {
             status: 1,
@@ -145,12 +145,9 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
             };
         }
 
-        if (pet_type !== 'all') {
-            if (pet_type === 'Chó-Mèo') {
-                foodFilters['pet_type'] = { $regex: new RegExp(`Chó và mèo`, 'i') }; // Trả về "Chó và mèo"
-            } else {
-                foodFilters['pet_type'] = { $regex: new RegExp(`^${pet_type}$`, 'i') }; // Khớp chính xác "Chó" hoặc "Mèo"
-            }
+        if (type !== 'all') {
+            foodFilters['type'] = { $regex: new RegExp(`^${type}$`, 'i') };
+
         }
         // Lấy danh sách foods khớp filter
         const matchedFoods = await foodsCollection.find(foodFilters).toArray();
@@ -215,6 +212,7 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
                     product_variant_id: food._id,
                     ingredient: food.ingredient,
                     weight: food.weight,
+                    type: food.type,
                     price: food.price,
                     quantity: food.quantity,
                     date_created: food.date_created,
@@ -252,7 +250,6 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
         };
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Internal Server Error' });
         return {
             status: 500,
             message: 'Internal Server Error'
@@ -400,7 +397,7 @@ exports.getSupplies = async (category, sortBy, color, size, type,
             status: 500,
             message: 'Internal Server Error'
         };
-    }const client = getClient();
+    } const client = getClient();
     const database = client.db("PBL6");
 }
 
