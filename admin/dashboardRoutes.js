@@ -1,9 +1,10 @@
 const express = require('express');
 const { getClient } = require("../db");
 const router = express.Router();
+const { authenticateToken } = require("../middleware/authenticateToken");
 
 // Route to get dashboard statistics
-router.get('/admin/dashboard/summary', async (req, res) => {
+router.get('/admin/dashboard/summary', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
     // Kiểm tra quyền admin
