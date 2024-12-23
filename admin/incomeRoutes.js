@@ -211,26 +211,38 @@ router.get("/admin/income/topProduct", authenticateToken, async (req, res) => {
             const productId = item.option.id_product;
             const name = item.option.name;
             const quantity = parseInt(item.quantity, 10); // Chuyển quantity về số
-
             // Nhóm theo sản phẩm và cộng tổng quantity
             if (!productSalesData[productId]) {
                 productSalesData[productId] = {
-                    productId: productId,
+                    id: productId,
                     name: name,
-                    soldQuantity: 0,
+                    sold: 0,
                 };
             }
-            productSalesData[productId].soldQuantity += quantity;
+            productSalesData[productId].sold += quantity;
         });
 
         // Chuyển dữ liệu nhóm sang dạng mảng và sắp xếp theo soldQuantity giảm dần
-        const sortedProductSales = Object.values(productSalesData).sort((a, b) => b.soldQuantity - a.soldQuantity);
+        const sortedProductSales = Object.values(productSalesData).sort((a, b) => b.sold - a.sold);
 
         // Lấy 10 sản phẩm bán chạy nhất
         const topProducts = sortedProductSales.slice(0, 10);
 
+        const productsCollection = db.collection('products');
+        const topProductsWithDetails = await Promise.all(
+            topProducts.map(async (product) => {
+                const productDetails = await productsCollection.findOne({ _id: product.id });
+                return {
+                    ...product,
+                    image: productDetails.image,
+                    category: productDetails.category,
+                    rating: productDetails.rating,
+                };
+            })
+        );
+        
         res.status(200).json({
-            topProducts,
+            topProducts: topProductsWithDetails,
         });
     } catch (error) {
         console.error("Error calculating top products:", error);
