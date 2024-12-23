@@ -755,7 +755,7 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
     }
 });
 // Get supplies
-router.get('/admin/products/supplies', async (req, res) => {
+router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập
     if (id_role !== 2 && id_role !== 3) {
@@ -923,7 +923,7 @@ router.get('/admin/products/supplies', async (req, res) => {
     }
 });
 // Search sp
-router.get('/admin/products/search', async (req, res) => {
+router.get('/admin/products/search', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập
     if (id_role !== 2 && id_role !== 3) {
@@ -1019,7 +1019,7 @@ router.get('/admin/products/search', async (req, res) => {
     }
 });
 // Search sp trả về tất cả variation
-router.get('/admin/products/searchByName', async (req, res) => {
+router.get('/admin/products/searchByName', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập
     if (id_role !== 2 && id_role !== 3) {

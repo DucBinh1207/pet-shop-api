@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
 const { getClient } = require("../db");
+const { authenticateToken } = require("../middleware/authenticateToken");
 router.get("/admin/income/orders", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
