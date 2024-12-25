@@ -409,7 +409,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
                     id_product
                 );
                 if (result.success) {
-                    res.status(200).json();
+                    res.status(200).json({imgURL: result.imageUrl});
                 } else {
                     res.status(400).json();
                 }
@@ -427,7 +427,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
                     id_product
                 );
                 if (result.success) {
-                    res.status(200).json();
+                    res.status(200).json({imgURL: result.imageUrl});
                 } else {
                     res.status(400).json();
                 }
@@ -445,7 +445,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
                     id_product
                 );
                 if (result.success) {
-                    res.status(200).json();
+                    res.status(200).json({imgURL: result.imageUrl});
                 } else {
                     res.status(400).json();
                 }
@@ -1092,7 +1092,5 @@ router.get('/admin/products/searchByName', authenticateToken, async (req, res) =
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
-
-
 
 module.exports = router;

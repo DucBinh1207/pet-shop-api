@@ -131,7 +131,6 @@ router.put('/admin/users/update', authenticateToken, async (req, res) => {
         password,
         id_role: id_roleToChange,
         name,
-        gender,
         telephone_number,
         province,
         district,
@@ -163,7 +162,6 @@ router.put('/admin/users/update', authenticateToken, async (req, res) => {
             email,
             id_role: parseInt(id_roleToChange, 10),
             name,
-            gender, // Sử dụng trực tiếp giá trị boolean từ request body
             telephone_number,
             province,
             district,
@@ -225,7 +223,7 @@ router.put('/admin/users/avatar', authenticateToken, upload.single('image'), asy
 
         if (updateResult.success) {
             // Trả về kết quả thành công
-            return res.status(200).json();
+            return res.status(200).json({imageUrl: updateResult.imageUrl});
         } else {
             return res.status(500).json({ message: updateResult.message });
         }
@@ -378,4 +376,31 @@ router.put('/admin/users/ban', authenticateToken, async (req, res) => {
     }
 });
 
+router.put('/admin/users/unban', authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(400).json({ message: 'Unauthorized access' });
+    }
+    const { userId } = req.body;
+    if (!userId) {
+        return res.status(400).json();
+    }
+    try{
+        const client = getClient();
+        const db = client.db("PBL6");
+        const usersCollection = db.collection("users");
+        const result = await usersCollection.updateOne(
+            { _id: userId },
+            { $set: { status: 1 } }
+        );
+        if (result.matchedCount === 0) {
+            return res.status(400).json();
+        }
+        console.log(`User with id ${userId} status updated to 1.`);
+        res.status(200).json();
+    }catch(error){
+        console.error('Error updating user status:', error);
+        res.status(500).json({ message: 'An error occurred while banning user' });
+    }
+});
 module.exports = router;
