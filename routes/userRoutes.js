@@ -177,6 +177,53 @@ router.put('/user/update', authenticateToken, async (req, res) => {
         res.status(500).jsonp({ message: "Lỗi máy chủ", error });
     }
 });
+// API cho web để update thông tin người dùng
+router.put('/user/updateWeb', authenticateToken, async (req, res) => {
+    const { name, telephone_number, nationality, province, district, ward, street } = req.body;
+    const userId = req.user.userId; // Lấy id người dùng từ token
+    console.log(userId);
+    try {
+        const client = getClient();
+        const db = client.db("PBL6");
+        const usersCollection = db.collection('users'); // Truy cập vào collection 'users'
+
+        // Tìm người dùng theo userId trước khi cập nhật
+        const existingUser = await usersCollection.findOne({ _id: userId, status: 1 });
+
+        if (!existingUser) {
+            // Nếu không tìm thấy người dùng, trả về 404
+            return res.status(404).jsonp({ message: "Người dùng không tồn tại" });
+        }
+
+        // Cập nhật thông tin người dùng
+        const updateResult = await usersCollection.updateOne(
+            { _id: userId }, // Tìm người dùng theo _id
+            {
+                $set: {
+                    name, 
+                    telephone_number, 
+                    nationality, 
+                    province, 
+                    district, 
+                    ward, 
+                    street
+                }
+            }
+        );
+
+        // Nếu không có bản ghi nào được cập nhật, trả về trạng thái 200 kèm thông báo
+        if (updateResult.modifiedCount === 0) {
+            return res.status(200).jsonp({ message: "Không có thông tin nào thay đổi" });
+        }
+
+
+        res.status(200).jsonp({ message: "Cập nhật thông tin thành công", });
+
+    } catch (error) {
+        console.error('Error updating user info:', error); // In ra lỗi nếu có
+        res.status(500).jsonp({ message: "Lỗi máy chủ", error });
+    }
+});
 // API cho web để update hoặc create avatar
 router.put('/user/avatar', authenticateToken, upload.single('image'), async (req, res) => {
     const userId = req.user.userId; // Lấy id từ token
