@@ -51,8 +51,10 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
 
         // Điều kiện sắp xếp
         let sortCondition = {};
-        if (sortBy === "lastest") {
-            sortCondition = { time_created: -1 }; // Sắp xếp theo thời gian giảm dần (mới nhất)
+        if (sortBy === "latest") {
+            sortCondition = { date: -1 }; // Sắp xếp theo thời gian giảm dần (mới nhất)
+        }else if(sortBy === "oldest"){
+            sortCondition = { date: 1 }; // Sắp xếp theo thời gian tăng dần (cũ nhất)
         }
 
         // Tính toán skip và limit

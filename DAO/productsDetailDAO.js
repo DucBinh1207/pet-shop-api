@@ -11,12 +11,12 @@ exports.getSuppliesDetail = async (productId) => {
         const commentsCollection = database.collection("comments");
 
         // Fetch the product from the products collection
-        const product = await productsCollection.findOne({ _id: productId });
+        const product = await productsCollection.findOne({ _id: productId, status:1 });
 
         if (!product) {
             return {
                 status: 404,
-                message: 'Product not found'
+                message: 'Product not found or deleted'
             };
         }
         // Lấy số lượng bình luận có id_product = productId

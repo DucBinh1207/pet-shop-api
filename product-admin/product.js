@@ -176,7 +176,7 @@ async function addSupplies(name, description, imagePath, material, brand, type, 
         if (!result.acknowledged) {
             return { success: false, message: "Failed to add supply product." };
         }
-        suppliesVariations = typeof suppliesVariations === 'string' ? JSON.parse(suppliesVariations) : variations_food;
+        suppliesVariations = typeof suppliesVariations === 'string' ? JSON.parse(suppliesVariations) : suppliesVariations;
         // Tiếp theo, lưu từng variation (biến thể) vào cơ sở dữ liệu
         const variationPromises = suppliesVariations.map(async (variation) => {
             const variationDoc = {
