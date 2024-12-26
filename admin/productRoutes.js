@@ -409,7 +409,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
                     id_product
                 );
                 if (result.success) {
-                    res.status(200).json({imgURL: result.imageUrl});
+                    res.status(200).json({ imgURL: result.imageUrl });
                 } else {
                     res.status(400).json();
                 }
@@ -427,7 +427,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
                     id_product
                 );
                 if (result.success) {
-                    res.status(200).json({imgURL: result.imageUrl});
+                    res.status(200).json({ imgURL: result.imageUrl });
                 } else {
                     res.status(400).json();
                 }
@@ -445,7 +445,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
                     id_product
                 );
                 if (result.success) {
-                    res.status(200).json({imgURL: result.imageUrl});
+                    res.status(200).json({ imgURL: result.imageUrl });
                 } else {
                     res.status(400).json();
                 }
@@ -462,13 +462,12 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
 });
 // Get pets
 router.get('/admin/products/pets', authenticateToken, async (req, res) => {
+    console.log("Query params:");
     const id_role = req.user.id_role;
     // Kiểm tra quyền truy cập
     if (id_role !== 2 && id_role !== 3) {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
-
-
     try {
         const client = getClient();
         const database = client.db("PBL6");
@@ -477,7 +476,7 @@ router.get('/admin/products/pets', authenticateToken, async (req, res) => {
 
         // Query parameters
         const category = req.query.category || 'all';
-        const breeds = req.query.breeds ? req.query.breeds.split(',') : [];
+        const search = req.query.search ? req.query.search.split(',') : [];
         const sortBy = req.query.sortBy || 'default';
         const minPrice = parseFloat(req.query.minPrice) || 0;
         const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
@@ -485,25 +484,28 @@ router.get('/admin/products/pets', authenticateToken, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
+        console.log("Query params:", req.query);
         // Build filters for pets
         let filters = {};
         if (category !== 'all') {
             filters['type'] = { $regex: new RegExp(category, 'i') };
         }
-        if (breeds.length > 0) {
-            filters['breed'] = { $in: breeds.map(breed => new RegExp(breed, 'i')) };
+        if (search.length > 0) {
+            filters['breed'] = { $in: search.map(search => new RegExp(search, 'i')) };
         }
         filters['price'] = { $gte: minPrice, $lte: maxPrice };
 
         // Apply status filter for pets
         if (status === 2) {
             filters['quantity'] = { $gt: 0 }; // Còn hàng
+            filters['status'] = 1;
         } else if (status === 3) {
             filters['quantity'] = 0; // Hết hàng
+            filters['status'] = 1;
         } else if (status === 4) {
             filters['status'] = 0; // Bị xóa
         } else {
-            filters['status'] = 1; // Mặc định
+            // filters['status'] = 1; // Mặc định
         }
 
         // Get filtered pets
@@ -543,13 +545,19 @@ router.get('/admin/products/pets', authenticateToken, async (req, res) => {
             const type = productPets.length > 0
                 ? productPets[0].type
                 : "";
+            const breed1 = productPets.length > 0
+                ? productPets[0].breed
+                : "";
             return {
                 id: product._id,
                 name: product.name,
+                image: product.image,
                 date_created: product.date_created,
                 rating: product.rating,
+                breed: breed1,
                 type: type,
                 price: minPrice, // Đưa giá trực tiếp ra ngoài
+                status: product.status
             };
         });
 
@@ -587,6 +595,7 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         const foodsCollection = database.collection('foods');
 
         // Query parameters
+        const search = req.query.search?.toLowerCase() || 'all';  
         const ingredient = req.query.ingredient?.toLowerCase() || 'all';
         const weightQuery = req.query.weight || 'all';
         const categories = req.query.category ? req.query.category.split(',').map(c => c.toLowerCase()) : [];
@@ -596,8 +605,8 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        const pet_type = req.query.pet_type || 'all';
-
+        const type = req.query.type || 'all';
+        console.log("Query params:", req.query);
         // Build filters for foods
         let foodFilters = {
             price: { $gte: minPrice, $lte: maxPrice },
@@ -621,12 +630,9 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
             foodFilters['category'] = { $in: categories.map(c => new RegExp(`^${c}$`, 'i')) };
         }
 
-        if (pet_type !== 'all') {
-            if (pet_type === 'Chó-Mèo') {
-                foodFilters['pet_type'] = { $regex: new RegExp(`Chó và mèo`, 'i') }; // Trả về "Chó và mèo"
-            } else {
-                foodFilters['pet_type'] = { $regex: new RegExp(`^${pet_type}$`, 'i') }; // Khớp chính xác "Chó" hoặc "Mèo"
-            }
+        if (type !== 'all') {
+            foodFilters['type'] = { $regex: new RegExp(`^${type}$`, 'i') }; // Khớp chính xác "Chó" hoặc "Mèo"
+
         }
 
         // Lấy danh sách foods khớp filter
@@ -638,6 +644,9 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         const productFilters = {
             _id: { $in: productIds },
         };
+        if (search !== 'all') {
+            productFilters['name'] = { $regex: new RegExp(search, 'i') };
+        }
         if (status !== 1 && status !== 4) {
             productFilters.status = 1; // Chỉ lấy sản phẩm active nếu không phải get all
         }
@@ -676,7 +685,7 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         const totalPages = Math.ceil(totalProducts / limit);
 
         // Fetch products with pagination
-        const products = await productsCollection
+        let products = await productsCollection
             .find(productFilters)
             .skip((page - 1) * limit)
             .limit(limit)
@@ -709,10 +718,11 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
             return {
                 id: product._id,
                 name: product.name,
+                image: product.image,
                 date_created: product.date_created,
                 rating: product.rating,
                 category: product.category,
-                pet_type: sortedProductFoods[0]?.pet_type,
+                type: sortedProductFoods[0]?.type,
                 //min_price_variant: minPriceVariant, // Giá thấp nhất
                 price: priceRange,
                 status: product.status
@@ -738,11 +748,11 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
                 break;
         }
         // Pagination
-        const startIndex = (page - 1) * limit;
-        const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
-        
+        // const startIndex = (page - 1) * limit;
+        // const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
+
         res.json({
-            products: paginatedProducts,
+            products: fullProducts,
             currentPage: page,
             totalPages,
             limit,
@@ -769,6 +779,7 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         const suppliesCollection = database.collection('supplies');
 
         // Query parameters
+        const search = req.query.search?.toLowerCase() || 'all';  
         const category = req.query.category?.toLowerCase() || 'all';
         const sortBy = req.query.sortBy || 'default';
         const color = req.query.color?.toLowerCase();
@@ -810,6 +821,9 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         const productFilters = {
             _id: { $in: productIds },
         };
+        if (search !== 'all') {
+            productFilters['name'] = { $regex: new RegExp(search, 'i') };
+        }
         if (status !== 1 && status !== 4) {
             productFilters.status = 1; // Chỉ lấy sản phẩm active nếu không phải get all
         }
@@ -885,6 +899,7 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
             return {
                 id: product._id, // Convert MongoDB _id to id
                 name: product.name,
+                image: product.image,
                 description: product.description,
                 date_created: product.date_created,
                 rating: product.rating,
@@ -906,11 +921,11 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         }
 
         // Pagination
-        const startIndex = (page - 1) * limit;
-        const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
+        // const startIndex = (page - 1) * limit;
+        // const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
 
         res.json({
-            products: paginatedProducts,
+            products: fullProducts,
             currentPage: page,
             totalPages,
             limit,
@@ -1025,7 +1040,7 @@ router.get('/admin/products/searchByName', authenticateToken, async (req, res) =
     if (id_role !== 2 && id_role !== 3) {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
-    
+
     const name = req.query.name; // Lấy giá trị name từ query string
 
     if (!name) {
@@ -1092,5 +1107,214 @@ router.get('/admin/products/searchByName', authenticateToken, async (req, res) =
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+// Get supplies details
+router.get('/admin/products/supplies/:id', authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
+    const productId = req.params.id;
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+    try {
+        const client = getClient();
+        const database = client.db("PBL6");
+        const productsCollection = database.collection('products');
+        const suppliesCollection = database.collection('supplies');
+        const commentsCollection = database.collection("comments");
 
+        // Fetch the product from the products collection
+        const product = await productsCollection.findOne({ _id: productId });
+
+        if (!product) {
+            res.status(404).json({ message: 'Product not found' });
+        }
+        // Lấy số lượng bình luận có id_product = productId
+        const totalReview = await commentsCollection.countDocuments({ id_product: productId });
+        // Fetch supplies linked to the product, ensuring status = 1
+        const supplies = await suppliesCollection
+            .find({ id_product: productId })
+            .toArray();
+
+        // Construct the response object
+        const response = {
+            id: product._id,
+            name: product.name,
+            description: product.description,
+            image: product.image,
+            date_created: product.date_created,
+            rating: product.rating,
+            category: product.category,
+            material: supplies[0]?.material || null, // Use the first variation for shared fields
+            brand: supplies[0]?.brand || null,       // Use the first variation for shared fields
+            type: supplies[0]?.type || null,         // Use the first variation for shared fields
+            totalReview: totalReview,
+            status: product.status,
+            variations_supplies: supplies.map(supply => ({
+                product_variant_id: supply._id,
+                color: supply.color,
+                size: supply.size,
+                price: supply.price,
+                quantity: supply.quantity,
+                date_created: supply.date_created,
+                status: supply.status,
+            })),
+        };
+        res.status(200).json(response);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    } finally {
+    }
+});
+// Get foods details
+router.get('/admin/products/foods/:id', authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
+    const foodId = req.params.id;
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+    try {
+
+        // Kết nối tới MongoDB và lấy các collection
+        const client = getClient();
+        const database = client.db("PBL6");
+        const foodsCollection = database.collection('foods');
+        const productsCollection = database.collection('products');
+        const commentsCollection = database.collection("comments");
+
+        // Lấy thông tin food theo ID
+        const food = await foodsCollection.findOne({ id_product: foodId });
+
+        if (!food) {
+            res.status(404).json({ message: "Food không tồn tại hoặc đã bị ẩn" });
+        }
+        // Lấy số lượng bình luận có id_product = productId
+        const totalReview = await commentsCollection.countDocuments({ id_product: foodId });
+        // Lấy thông tin sản phẩm tương ứng
+        const product = await productsCollection.findOne({ _id: food.id_product });
+
+        if (!product) {
+            res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị ẩn" });
+        }
+
+        // Lấy tất cả variations của sản phẩm từ bảng foods
+        const allVariations = await foodsCollection.find({ id_product: product._id, status: 1 }).toArray();
+
+        // Xử lý variations_food
+        const variationsFood = allVariations.map(variation => ({
+            product_variant_id: variation._id,
+            ingredient: variation.ingredient === "Chicken" ? "Gà" : variation.ingredient === "Beef" ? "Bò" : variation.ingredient,
+            weight: variation.weight,
+            price: variation.price,
+            quantity: variation.quantity,
+            date_created: variation.date_created,
+            status: variation.status,
+        }));
+
+        // Tạo đối tượng response
+        const responseData = {
+            id: product._id,
+            name: product.name,
+            description: product.description,
+            image: product.image,
+            date_created: product.date_created,
+            rating: product.rating,
+            category: product.category,
+            pet_type: food.pet_type,
+            nutrition_info: food.nutrition_info,
+            expire_date: food.expire_date,
+            brand: food.brand,
+            type: food.type,
+            totalReview: totalReview,
+            status: product.status,
+            variations_foods: variationsFood,
+        };
+
+        res.status(200).json(responseData);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    } finally {
+    }
+});
+// Get pets details
+router.get('/admin/products/pets/:id', authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
+    const petId = req.params.id;
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2 && id_role !== 3) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+    try {
+        // Kết nối tới MongoDB và lấy các collection
+        const client = getClient();
+        const database = client.db("PBL6");
+        const petsCollection = database.collection('pets');
+        const productsCollection = database.collection('products');
+        const commentsCollection = database.collection("comments");
+
+        // Lấy thông tin pet theo ID
+        const pet = await petsCollection.findOne({ id_product: petId });
+
+        if (!pet) {
+            return res.status(404).json({ message: "Pet không tồn tại" });
+        }
+        // Lấy số lượng bình luận có id_product = productId
+        const totalReview = await commentsCollection.countDocuments({ id_product: petId });
+
+        // Lấy thông tin sản phẩm tương ứng
+        const product = await productsCollection.findOne({ _id: pet.id_product });
+
+        if (!product) {
+            return res.status(404).json({ message: "Sản phẩm  không tồn tại" });
+        }
+
+        // Lấy tất cả variations của sản phẩm từ bảng pets
+        const allVariations = await petsCollection.find({
+            id_product: product._id,
+            status: 1,
+        }).toArray();
+
+        // Xử lý variations_pets
+        const variationsPets = allVariations.map(variation => ({
+            product_variant_id: variation._id,
+            price: variation.price,
+            gender: variation.gender,
+            health: variation.health,
+            father: variation.father,
+            mother: variation.mother,
+            type: variation.type,
+            deworming: variation.deworming,
+            vaccine: variation.vaccine,
+            breed: variation.breed,
+            breed_origin: variation.breed_origin,
+            trait: variation.trait,
+            date_of_birth: variation.date_of_birth,
+            quantity: variation.quantity,
+            date_created: variation.date_created,
+            status: variation.status,
+        }));
+
+        // Tạo đối tượng response
+        const responseData = {
+            id: product._id,
+            name: product.name,
+            description: product.description,
+            image: product.image,
+            date_created: product.date_created,
+            rating: product.rating,
+            category: product.category,
+            totalReview: totalReview,
+            status: product.status,
+            variations_pets: variationsPets,
+
+        };
+        return res.status(200).json(responseData);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    } finally {
+    }
+});
 module.exports = router;
