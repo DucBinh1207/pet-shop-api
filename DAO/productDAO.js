@@ -380,25 +380,23 @@ exports.getSupplies = async (category, sortBy, color, size, type,
         }
 
         // Pagination
-        const startIndex = (page - 1) * limit;
-        const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
+        // const startIndex = (page - 1) * limit;
+        // const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
 
         return {
             status: 200,
-            products: paginatedProducts,
+            products: fullProducts,
             currentPage: page,
             totalPages,
             limit
         };
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Internal Server Error' });
         return {
             status: 500,
             message: 'Internal Server Error'
         };
-    } const client = getClient();
-    const database = client.db("PBL6");
+    }
 }
 
 exports.searchProduct = async (name) => {
