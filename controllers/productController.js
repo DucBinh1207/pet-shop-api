@@ -7,7 +7,7 @@ exports.getPet = async (req, res) => {
     const minPrice = parseFloat(req.query.minPrice) || 0;
     const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = 10;
     try {
         const result = await productBO.getPet(category, breeds, sortBy,
             minPrice, maxPrice, page, limit);

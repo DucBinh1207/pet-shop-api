@@ -94,9 +94,9 @@ exports.logOutUser = async (token) => {
                 token === (await redis.get(userToken))
             ) {
                 return {
-                    success: false,
-                    status: 401,
-                    message: "Token has expired. Please request a new token.",
+                    success: true,
+                    status: 200,
+                    // message: "Token has expired. Please request a new token.",
                 };
             } else {
                 await redis.set(userToken, token, {

@@ -13,8 +13,8 @@ router.get("/admin/comments", authenticateToken, async (req, res) => {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
-    // Lấy giá trị `star` từ query
-    const { star, status, userId } = req.query;
+    // Lấy giá trị từ query
+    const { star, status, userId, limit = 10, page = 1 } = req.query;
 
     try {
         const client = getClient();
@@ -39,23 +39,38 @@ router.get("/admin/comments", authenticateToken, async (req, res) => {
         if (userId !== undefined) {
             filter.userId = userId;
         }
-        // Lấy danh sách comments
+
+        // Tính toán phân trang
+        const parsedLimit = parseInt(limit, 10);
+        const parsedPage = parseInt(page, 10);
+        if (isNaN(parsedLimit) || isNaN(parsedPage) || parsedLimit <= 0 || parsedPage <= 0) {
+            return res.status(400).json({ message: "Limit và page phải là số nguyên dương hợp lệ" });
+        }
+
+        const skip = (parsedPage - 1) * parsedLimit;
+
+        // Tổng số lượng comments
+        const totalComments = await commentsCollection.countDocuments(filter);
+
+        // Lấy danh sách comments với phân trang
         const comments = await commentsCollection
             .find(filter)
             .sort({ createdAt: -1 }) // Sắp xếp theo thời gian (mới nhất lên đầu)
+            .skip(skip)
+            .limit(parsedLimit)
             .toArray();
 
-        // Lấy thông tin product name từ bảng products
+        // Lấy thông tin product name và user info từ bảng products và users
         const resultComments = await Promise.all(
             comments.map(async (comment) => {
                 const product = await productsCollection.findOne({ _id: comment.id_product });
-                const user =  await usersCollection.findOne({ _id: comment.userId });
+                const user = await usersCollection.findOne({ _id: comment.userId });
                 return {
                     id: comment._id,
                     userId: comment.userId,
-                    image: user.image || "null",
+                    image: user?.image || "null",
                     id_product: comment.id_product,
-                    product_name: product ? product.name : "null",
+                    product_name: product?.name || "null",
                     star: comment.star,
                     content: comment.content,
                     status: comment.status,
@@ -65,13 +80,17 @@ router.get("/admin/comments", authenticateToken, async (req, res) => {
         );
 
         res.status(200).json({
-            comments: resultComments,
+            comments: resultComments, // Dữ liệu phân trang
+            totalComments, // Tổng số comments
+            totalPages: Math.ceil(totalComments / parsedLimit), // Tổng số trang
+            currentPage: parsedPage, // Trang hiện tại
         });
     } catch (error) {
         console.error("Error fetching comments:", error);
         res.status(500).json({ message: "Lỗi máy chủ. Vui lòng thử lại sau." });
     }
 });
+
 
 router.put("/admin/comments/status", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;

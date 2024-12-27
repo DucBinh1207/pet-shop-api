@@ -15,64 +15,88 @@ router.get("/admin/vouchers", authenticateToken, async (req, res) => {
     }
 
     // Nhận các query từ client
-    const searchCode = req.query.code || ""; // Tìm kiếm theo code
-    const filterAvailable = parseInt(req.query.available, 10); // 1: quantity > 0, 0: quantity = 0
-    const filterStatus = parseInt(req.query.status, 10); // 1: status = 1, 0: status = 0
+    const searchCode = req.query.search || ""; // Tìm kiếm theo code
+    const filterStatus = parseInt(req.query.status, 10); // Các trạng thái: 1: tất cả, 2: còn hàng, 3: hết hàng, 0: đã xóa
     const sortBy = req.query.sortBy || "latest"; // Sắp xếp, mặc định là mới nhất
+    const limit = parseInt(req.query.limit, 10) || 10; // Mặc định lấy 10 đơn hàng mỗi trang
+    const page = parseInt(req.query.page, 10) || 1; // Mặc định là trang 1
 
     try {
         const client = getClient();
         const db = client.db("PBL6");
         const vouchersCollection = db.collection("vouchers");
 
-        // Lấy danh sách orders
+        // Lấy danh sách vouchers
         let vouchers = await vouchersCollection.find({}).toArray();
 
         // Nếu có lọc theo `code`
         if (searchCode) {
-            vouchers = vouchers.filter((vouhcher) =>
-                vouhcher.code.toLowerCase().includes(searchCode.toLowerCase())
-            );
-        }
-
-        if (!isNaN(filterAvailable)) {
-            vouchers = vouchers.filter((vouhcher) =>
-                filterAvailable === 1
-                    ? parseInt(vouhcher.quantity, 10) > 0
-                    : parseInt(vouhcher.quantity, 10) === 0
+            vouchers = vouchers.filter((voucher) =>
+                voucher.code.toLowerCase().includes(searchCode.toLowerCase())
             );
         }
 
         // Nếu có lọc theo `status`
         if (!isNaN(filterStatus)) {
-            vouchers = vouchers.filter((vouhcher) => vouhcher.status === filterStatus);
+            switch (filterStatus) {
+                case 1: // Tất cả
+                    break;
+                case 2: // Còn hàng (quantity > 0) và chưa xóa
+                    vouchers = vouchers.filter((voucher) =>
+                        parseInt(voucher.quantity, 10) > 0 && voucher.status !== 0
+                    );
+                    break;
+                case 3: // Hết hàng (quantity = 0) và chưa xóa
+                    vouchers = vouchers.filter((voucher) =>
+                        parseInt(voucher.quantity, 10) === 0 && voucher.status !== 0
+                    );
+                    break;
+                case 0: // Đã xóa (status = 0)
+                    vouchers = vouchers.filter((voucher) => voucher.status === 0);
+                    break;
+                default:
+                    break;
+            }
         }
 
         // Sắp xếp theo thời gian
         if (sortBy === "latest") {
             vouchers.sort((a, b) => new Date(b.date_created) - new Date(a.date_created));
+        } else if (sortBy === "furthest") {
+            vouchers.sort((a, b) => new Date(a.date_created) - new Date(b.date_created));
         }
 
-        const completeVouhchers = vouchers.map(voucher => ({
+        // Tính toán phân trang
+        const totalVouchers = vouchers.length;
+        const totalPages = Math.ceil(totalVouchers / limit);
+        const skip = (page - 1) * limit;
+
+        // Lấy dữ liệu theo trang
+        const paginatedVouchers = vouchers.slice(skip, skip + limit);
+
+        const completeVouchers = paginatedVouchers.map(voucher => ({
             id: voucher._id.toString(),
             code: voucher.code,
             name: voucher.name,
             percent: voucher.percent,
             date_created: voucher.date_created,
             status: voucher.status,
-            quantity: voucher.quantity
+            quantity: parseInt(voucher.quantity, 10),
         }));
 
         res.status(200).json({
-            vouchers: completeVouhchers,
+            vouchers: completeVouchers,
+            totalVouchers,
+            totalPages,
+            currentPage: page,
         });
     } catch (error) {
-        console.error("Error filtering orders:", error);
+        console.error("Error filtering vouchers:", error);
         res.status(500).json({ message: "Lỗi máy chủ", error });
-    } finally {
-
     }
 });
+
+
 // Create voucher
 router.post('/admin/vouchers/create', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
