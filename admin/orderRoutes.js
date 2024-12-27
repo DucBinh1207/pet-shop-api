@@ -23,7 +23,7 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
-    const id_user = req.query.userId || ""; // Lấy id_user từ query (nếu có)
+    const id_user = req.query.search || ""; // Lấy id_user từ query (nếu có)
     const status = req.query.status || ""; // Lấy trạng thái từ query (nếu có)
     const sortBy = req.query.sortBy || ""; // Mặc định sắp xếp theo "lastest" nếu không truyền
     const limit = parseInt(req.query.limit, 10) || 10; // Mặc định lấy 10 đơn hàng mỗi trang
@@ -43,7 +43,10 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
         // Điều kiện lọc
         let filter = {};
         if (id_user) {
-            filter.id_user = id_user;
+            filter.$or = [
+                { id_user: { $regex: new RegExp(id_user, 'i') } },
+                { name: { $regex: new RegExp(id_user, 'i') } },
+            ];
         }
         if (status) {
             filter.status = parseInt(status, 10); // Lọc theo trạng thái nếu được truyền
