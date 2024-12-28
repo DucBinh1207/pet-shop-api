@@ -95,8 +95,6 @@ router.get("/admin/vouchers", authenticateToken, async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error });
     }
 });
-
-
 // Create voucher
 router.post('/admin/vouchers/create', authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;

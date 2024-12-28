@@ -193,6 +193,7 @@ exports.getTopComment = async () => {
         // Lấy thông tin user tương ứng cho mỗi comment
         const enrichedComments = await Promise.all(topComments.map(async (comment) => {
             const user = await usersCollection.findOne({ _id: comment.userId });
+            console.log(comment.userId);
             return new EnrichedComment(comment, user);
         }));
 
