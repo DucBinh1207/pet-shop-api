@@ -191,6 +191,7 @@ exports.createOrder = async (req, res) => {
         payment_method,
         note
     } = req.body;
+    console.log(req.body);
     try {
         const result = await orderBO.createOrder2(
             id_user,
@@ -213,7 +214,8 @@ exports.createOrder = async (req, res) => {
             } else {
                 res.status(result.status).json({
                     id_order: result.id_order,
-                    amount: result.amount});
+                    amount: result.amount,
+                    payment_method: result.payment_method,});
             }
         }
     } catch (err) {

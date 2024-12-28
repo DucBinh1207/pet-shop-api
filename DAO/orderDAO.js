@@ -769,7 +769,7 @@ exports.createOrder2 = async (
         const total_price = subtotal_price + shipping_price;
 
         //Chuyen int payment_method
-        payment_method = parseInt(payment_method, 10);
+        // payment_method = parseInt(payment_method, 10);
         
         // Lưu order vào MongoDB
         const newOrder = {
@@ -897,11 +897,12 @@ exports.createOrder2 = async (
         // 3: Thanh toán thất bại
         await paymentsCollection.insertOne(newPayment);
         console.log("Đã tạo bản ghi payment");
-
+        console.log("payment_method", payment_method);
         return {
             status: 201,
             id_order: id_order.toString(),
-            amount: total_price
+            amount: total_price,
+            payment_method: payment_method
         };
 
     } catch (error) {
