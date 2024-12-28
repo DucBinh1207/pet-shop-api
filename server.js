@@ -3,8 +3,8 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const authRoutes = require("./routes/authRoutes");
 const cartRoutes = require("./routes/cartItemRoutesMongo");
 const orderRoutes = require("./routes/orderRoutesMongo");
-const detailRoutes = require('./routes/productsDetailRoutes');
-const commentRoutes = require('./routes/commentRoutes'); 
+const detailRoutes = require("./routes/productsDetailRoutes");
+const commentRoutes = require("./routes/commentRoutes");
 const voucherRoutes = require("./routes/voucherRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -21,40 +21,49 @@ const dashboardRoutes = require("./admin/dashboardRoutes");
 const { connectToDB, closeDBConnection } = require("./db");
 
 const listenForExpirationEvents = require("./middleware/redisSubscriber");
-const {returnStock} = require("./product/product");
+const { returnStock } = require("./product/product");
 
 const cors = require("cors");
 
 const app = express();
 const port = 8000;
 
-const uri = "mongodb+srv://tdv0905179758:qMdBYWg45uwOUz9F@viet.fn3ykhs.mongodb.net/?retryWrites=true&w=majority&appName=Viet";
+const uri =
+  "mongodb+srv://tdv0905179758:qMdBYWg45uwOUz9F@viet.fn3ykhs.mongodb.net/?retryWrites=true&w=majority&appName=Viet";
 
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 app.use(express.json());
 app.use(
   cors({
     credentials: true,
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://pet-shop-test-deploy.vercel.app', 'https://pet-shop-admin.vercel.app'],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://pet-shop-test-deploy.vercel.app",
+      "https://pet-shop-admin.vercel.app",
+      "https://pet-shop-web-pink.vercel.app",
+    ],
   })
 );
 
 // Middleware để log route và mã trả về mỗi khi được gọi
 app.use((req, res, next) => {
   const start = Date.now();
-  
+
   res.on("finish", () => {
     const duration = Date.now() - start;
-    console.log(`Route: ${req.method} ${req.originalUrl} | Status: ${res.statusCode} | Time: ${duration}ms`);
+    console.log(
+      `Route: ${req.method} ${req.originalUrl} | Status: ${res.statusCode} | Time: ${duration}ms`
+    );
   });
-  
+
   next();
 });
 
@@ -67,11 +76,11 @@ async function connectToMongoDB() {
   }
 }
 
-app.get('/', (req, res) => {
-  res.send('Hello from Express server!');
+app.get("/", (req, res) => {
+  res.send("Hello from Express server!");
 });
 
-app.get('/pingMongo', async (req, res) => {
+app.get("/pingMongo", async (req, res) => {
   try {
     await client.db("admin").command({ ping: 1 });
     res.send("Pinged MongoDB deployment. Successfully connected!");
@@ -83,8 +92,8 @@ app.get('/pingMongo', async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
-app.use('/api', detailRoutes);
-app.use('/api', commentRoutes);
+app.use("/api", detailRoutes);
+app.use("/api", commentRoutes);
 app.use("/api", voucherRoutes);
 app.use("/api", paymentRoutes);
 app.use("/api", userRoutes);
@@ -102,8 +111,13 @@ app.use(express.static("public"));
 
 // Middleware xử lý lỗi
 app.use((err, req, res, next) => {
-  console.error(`Error occurred on route ${req.method} ${req.originalUrl}:`, err);
-  res.status(500).json({ message: "Đã xảy ra lỗi trên máy chủ", error: err.message });
+  console.error(
+    `Error occurred on route ${req.method} ${req.originalUrl}:`,
+    err
+  );
+  res
+    .status(500)
+    .json({ message: "Đã xảy ra lỗi trên máy chủ", error: err.message });
 });
 
 listenForExpirationEvents(async (expiredKey, data) => {
