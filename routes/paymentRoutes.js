@@ -7,8 +7,6 @@ const qs = require("qs");
 const { getClient } = require("../db");
 const router = express.Router();
 
-// MongoDB connection (nếu không cần tái sử dụng kết nối từ file chính)
-const { client } = require("../db");
 // Middleware để parse JSON body
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
