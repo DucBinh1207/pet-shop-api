@@ -66,7 +66,7 @@ async function registerUser(email, id_role) {
       EX: 60 * 60,
     });
 
-    const verificationLink = `${process.env.END_USER_URL}/email-confirm?token=${token}`;
+    const verificationLink = `https://pet-shop-web-pink.vercel.app/email-confirm?token=${token}`;
     await sendVerificationEmail(email, verificationLink);
 
     return {
@@ -256,7 +256,7 @@ async function sendVerificationEmail(email, link) {
 
         <div class="container">
           <h1>
-            <a href="${process.env.END_USER_URL}" target="_blank" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <a href="https://pet-shop-web-pink.vercel.app" target="_blank" style="text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: center; gap: 10px;">
               <img src="https://i.imgur.com/riVShrz.png" alt="Whiskers Logo" style="width: 40px; height: 40px;">
               <span>Whiskers</span>
             </a>
