@@ -1065,7 +1065,7 @@ router.get('/admin/products/searchByName', authenticateToken, async (req, res) =
         const normalizedSearch = normalizeText(name);
 
         const filters = {
-            name: { $regex: new RegExp(normalizedSearch, 'i') }
+            name: { $regex: new RegExp(name, 'i') }
         };
 
         const products = await productsCollection.find(filters).toArray();
@@ -1199,7 +1199,7 @@ router.get('/admin/products/foods/:id', authenticateToken, async (req, res) => {
         }
 
         // Lấy tất cả variations của sản phẩm từ bảng foods
-        const allVariations = await foodsCollection.find({ id_product: product._id, status: 1 }).toArray();
+        const allVariations = await foodsCollection.find({ id_product: product._id}).toArray();
 
         // Xử lý variations_food
         const variationsFood = allVariations.map(variation => ({
@@ -1273,7 +1273,6 @@ router.get('/admin/products/pets/:id', authenticateToken, async (req, res) => {
         // Lấy tất cả variations của sản phẩm từ bảng pets
         const allVariations = await petsCollection.find({
             id_product: product._id,
-            status: 1,
         }).toArray();
 
         // Xử lý variations_pets

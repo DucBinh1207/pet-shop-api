@@ -5,92 +5,53 @@ const { getClient } = require("../db");
 router.use(express.json());
 const { authenticateToken } = require("../middleware/authenticateToken");
 
-router.get("/admin/comments", authenticateToken, async (req, res) => {
-    const id_role = req.user.id_role;
-
-    // Kiểm tra quyền truy cập
-    if (id_role !== 2 && id_role !== 3) {
-        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
-    }
-
-    // Lấy giá trị từ query
-    const { star, status, userId, limit = 10, page = 1 } = req.query;
+router.get('/admin/comments', async (req, res) => {
+    const { star, userId } = req.query;
+    const status = req.query.status ? parseInt(req.query.status) : [0, 1, 2]; // Default to [0, 1, 2] if status is not provided
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
 
     try {
         const client = getClient();
         const db = client.db("PBL6");
-        const commentsCollection = db.collection("comments");
-        const productsCollection = db.collection("products");
-        const usersCollection = db.collection("users");
+        const commentsCollection = db.collection('comments');
 
-        // Tạo bộ lọc
-        let filter = {};
-        if (star !== undefined) {
-            const parsedStar = parseInt(star, 10);
-            if (isNaN(parsedStar)) {
-                return res.status(400).json({ message: "Star phải là một số nguyên hợp lệ" });
-            }
-            filter.star = parsedStar;
+        // Build filters
+        let filters = {};
+        if (star) {
+            filters.star = parseInt(star);
         }
-        if (status !== undefined) {
-            const parsedStatus = parseInt(status, 10);
-            filter.status = parsedStatus;
+        if (userId) {
+            filters.userId = userId;
         }
-        if (userId !== undefined) {
-            filter.userId = userId;
+        if (Array.isArray(status)) {
+            filters.status = { $in: status };
+        } else {
+            filters.status = status;
         }
 
-        // Tính toán phân trang
-        const parsedLimit = parseInt(limit, 10);
-        const parsedPage = parseInt(page, 10);
-        if (isNaN(parsedLimit) || isNaN(parsedPage) || parsedLimit <= 0 || parsedPage <= 0) {
-            return res.status(400).json({ message: "Limit và page phải là số nguyên dương hợp lệ" });
-        }
-
-        const skip = (parsedPage - 1) * parsedLimit;
-
-        // Tổng số lượng comments
-        const totalComments = await commentsCollection.countDocuments(filter);
-
-        // Lấy danh sách comments với phân trang
+        // Fetch comments with pagination
         const comments = await commentsCollection
-            .find(filter)
-            .sort({ createdAt: -1 }) // Sắp xếp theo thời gian (mới nhất lên đầu)
-            .skip(skip)
-            .limit(parsedLimit)
+            .find(filters)
+            .skip((page - 1) * limit)
+            .limit(limit)
             .toArray();
 
-        // Lấy thông tin product name và user info từ bảng products và users
-        const resultComments = await Promise.all(
-            comments.map(async (comment) => {
-                const product = await productsCollection.findOne({ _id: comment.id_product });
-                const user = await usersCollection.findOne({ _id: comment.userId });
-                return {
-                    id: comment._id,
-                    userId: comment.userId,
-                    image: user?.image || "null",
-                    id_product: comment.id_product,
-                    product_name: product?.name || "null",
-                    star: comment.star,
-                    content: comment.content,
-                    status: comment.status,
-                    date_created: comment.time,
-                };
-            })
-        );
+        // Count total comments for pagination
+        const totalComments = await commentsCollection.countDocuments(filters);
+        const totalPages = Math.ceil(totalComments / limit);
 
         res.status(200).json({
-            comments: resultComments, // Dữ liệu phân trang
-            totalComments, // Tổng số comments
-            totalPages: Math.ceil(totalComments / parsedLimit), // Tổng số trang
-            currentPage: parsedPage, // Trang hiện tại
+            comments,
+            currentPage: page,
+            totalPages,
+            limit
         });
     } catch (error) {
         console.error("Error fetching comments:", error);
-        res.status(500).json({ message: "Lỗi máy chủ. Vui lòng thử lại sau." });
+        res.status(500).json({ message: "Internal Server Error", error });
     }
 });
-
 
 router.put("/admin/comments/status", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;

@@ -234,10 +234,10 @@ router.put('/admin/users/avatar', authenticateToken, upload.single('image'), asy
 });
 
 router.get('/admin/users/get', authenticateToken, async (req, res) => {
-    const id_role = req.user.id_role;
+    const id_role1 = req.user.id_role;
 
     // Kiểm tra quyền truy cập
-    if (id_role !== 2 && id_role !== 3) {
+    if (id_role1 !== 2 && id_role1 !== 3) {
         return res.status(403).json({ message: "Bạn không có quyền truy cập" });
     }
 
@@ -255,18 +255,18 @@ router.get('/admin/users/get', authenticateToken, async (req, res) => {
 
         // Lọc theo tên hoặc email
         if (search) {
-            const normalizeText = (text) =>
-                text
-                    .normalize('NFD') // Phân tách Unicode
-                    .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
-                    .replace(/[^a-zA-Z0-9 ]/g, '') // Loại bỏ ký tự đặc biệt
-                    .toLowerCase();
+            // const normalizeText = (text) =>
+            //     text
+            //         .normalize('NFD') // Phân tách Unicode
+            //         .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
+            //         .replace(/[^a-zA-Z0-9 ]/g, '') // Loại bỏ ký tự đặc biệt
+            //         .toLowerCase();
 
-            const normalizedSearch = normalizeText(search);
+            // const normalizedSearch = normalizeText(search);
 
             query.$or = [
-                { name: { $regex: new RegExp(normalizedSearch, 'i') } },
-                { email: { $regex: new RegExp(normalizedSearch, 'i') } },
+                { name: { $regex: new RegExp(search, 'i') } },
+                { email: { $regex: new RegExp(search, 'i') } },
             ];
         }
 
