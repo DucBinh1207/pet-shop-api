@@ -14,7 +14,10 @@ router.get('/admin/comments', async (req, res) => {
     try {
         const client = getClient();
         const db = client.db("PBL6");
+
         const commentsCollection = db.collection('comments');
+        const usersCollection = db.collection('users');
+        const productsCollection = db.collection('products');
 
         // Build filters
         let filters = {};
@@ -37,14 +40,45 @@ router.get('/admin/comments', async (req, res) => {
             .limit(limit)
             .toArray();
 
-        // Count total comments for pagination
-        const totalComments = await commentsCollection.countDocuments(filters);
-        const totalPages = Math.ceil(totalComments / limit);
+        // Fetch related data for comments
+        const userIds = [...new Set(comments.map(comment => comment.userId))];
+        const productIds = [...new Set(comments.map(comment => comment.id_product))];
+
+        const users = await usersCollection
+            .find({ _id: { $in: userIds } })
+            .toArray();
+        const products = await productsCollection
+            .find({ _id: { $in: productIds } })
+            .toArray();
+
+        // Create lookup maps for users and products
+        const userMap = users.reduce((map, user) => {
+            map[user._id] = user.image; // Chỉ lấy image từ users
+            return map;
+        }, {});
+
+        const productMap = products.reduce((map, product) => {
+            map[product._id] = product.name; // Chỉ lấy name từ products
+            return map;
+        }, {});
+
+        // Customize the returned fields
+        const customizedComments = comments.map(comment => ({
+            id: comment._id,
+            userId: comment.userId,
+            image: userMap[comment.userId] || null, // Lấy image từ bảng users
+            idProduct: comment.id_product,
+            productName: productMap[comment.id_product] || null, // Lấy name từ bảng products
+            star: comment.star,
+            content: comment.content,
+            status: comment.status,
+            dateCreated: comment.time,
+        }));
 
         res.status(200).json({
-            comments,
+            comments: customizedComments,
             currentPage: page,
-            totalPages,
+            totalPages: Math.ceil(await commentsCollection.countDocuments(filters) / limit),
             limit
         });
     } catch (error) {
@@ -52,6 +86,8 @@ router.get('/admin/comments', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error });
     }
 });
+
+
 
 router.put("/admin/comments/status", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
