@@ -272,7 +272,7 @@ exports.getSupplies = async (category, sortBy, color, size, type,
         };
 
         if (category !== 'all') {
-            supplyFilters.type = { $regex: new RegExp(category, 'i') };
+            supplyFilters.category = { $regex: new RegExp(category, 'i') };
         }
         if (color) {
             supplyFilters.color = { $regex: new RegExp(color, 'i') };

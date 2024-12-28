@@ -74,11 +74,12 @@ exports.getSupplies = async (req, res) => {
     const sortBy = req.query.sortBy || 'default';
     const color = req.query.color?.toLowerCase();
     const size = req.query.size?.toLowerCase();
-    const type = req.query.type?.toLowerCase(); // Thêm type vào query parameters
+    const type = req.query.type; // Thêm type vào query parameters
     const minPrice = parseFloat(req.query.minPrice) || 0;
     const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    console.log(category, sortBy, color, size, type, minPrice, maxPrice, page, limit);
     try {
         const result = await productBO.getSupplies(category, sortBy, color, size, type,
             minPrice, maxPrice, page, limit);

@@ -53,7 +53,6 @@ router.get('/admin/comments', async (req, res) => {
     }
 });
 
-
 router.put("/admin/comments/status", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
 
