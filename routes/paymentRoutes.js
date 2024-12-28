@@ -25,7 +25,7 @@ router.post("/payment", authenticateToken, async (req, res) => {
     const { id_order} = req.body;
 
     const embed_data = {
-        redirecturl: `https://pet-shop-test-deploy.vercel.app/cart/order-success?id_order=${id_order}`
+        redirecturl: `https://pet-shop-web-pink.vercel.app/cart/order-success?id_order=${id_order}`
     };
 
     // Kiểm tra xem id_order và amount có tồn tại hay không
