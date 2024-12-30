@@ -83,12 +83,13 @@ router.get("/admin/vouchers", authenticateToken, async (req, res) => {
             status: voucher.status,
             quantity: parseInt(voucher.quantity, 10),
         }));
-
+        const totalRecords = completeVouchers.length;
         res.status(200).json({
             vouchers: completeVouchers,
             totalVouchers,
             totalPages,
             currentPage: page,
+            totalRecords
         });
     } catch (error) {
         console.error("Error filtering vouchers:", error);
@@ -214,6 +215,45 @@ router.put('/admin/vouchers/delete', authenticateToken, async (req, res) => {
         const result = await vouchersCollection.updateOne(
             { _id: id }, // Điều kiện tìm người dùng theo id
             { $set: { status: 0 } } // Cập nhật status về 0
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(400).json();
+        }
+
+        res.status(200).json();
+    } catch (error) {
+        console.error('Error updating voucher status:', error);
+        res.status(500).json({ message: 'An error occurred while deleting voucher' });
+    } finally {
+
+    }
+});
+//Undelete voucher
+router.put('/admin/vouchers/unDelete', authenticateToken, async (req, res) => {
+    const id_role = req.user.id_role;
+
+    // Chỉ admin được phép thực hiện
+    if (id_role !== 2) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+
+    const { id } = req.body; // Lấy id_user từ body request
+
+    // Kiểm tra đầu vào
+    if (!id) {
+        return res.status(400).json();
+    }
+
+    try {
+        // Kết nối tới MongoDB
+        const client = getClient();
+        const db = client.db("PBL6");
+        const vouchersCollection = db.collection("vouchers");
+        // Tìm và cập nhật trạng thái `status` về 1 
+        const result = await vouchersCollection.updateOne(
+            { _id: id }, // Điều kiện tìm người dùng theo id
+            { $set: { status: 1 } } // Cập nhật status về 1
         );
 
         if (result.matchedCount === 0) {

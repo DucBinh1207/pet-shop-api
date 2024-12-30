@@ -1,6 +1,5 @@
 const express = require('express');
 const { getClient } = require("../db");
-const { ObjectId } = require('mongodb');
 
 exports.getPet = async (category, breeds, sortBy,
     minPrice, maxPrice, page, limit) => {
@@ -99,12 +98,13 @@ exports.getPet = async (category, breeds, sortBy,
                 return sortBy === 'price' ? minPriceA - minPriceB : minPriceB - minPriceA;
             });
         }
-
+        const totalRecords = fullProducts.length;
         return {
             status: 200,
             products: fullProducts,
             currentPage: page,
             totalPages,
+            totalRecords,
             limit
         };
 
@@ -240,12 +240,13 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
                 sortedProducts = fullProducts; // Không sắp xếp
                 break;
         }
-
+        const totalRecords = sortedProducts.length;
         return {
             status: 200,
             products: sortedProducts,
             currentPage: page,
             totalPages,
+            totalRecords,
             limit
         };
     } catch (err) {
@@ -274,8 +275,11 @@ exports.getSupplies = async (category, sortBy, color, size, type,
         if (category !== 'all') {
             supplyFilters.category = { $regex: new RegExp(category, 'i') };
         }
+        // if (color) {
+        //     supplyFilters.color = { $regex: new RegExp(color, 'i') };
+        // }
         if (color) {
-            supplyFilters.color = { $regex: new RegExp(color, 'i') };
+            supplyFilters.color = { $regex: color, $options: 'i' }; // 'i' để không phân biệt hoa thường
         }
         if (size) {
             supplyFilters.size = { $regex: new RegExp(size, 'i') };
@@ -382,12 +386,13 @@ exports.getSupplies = async (category, sortBy, color, size, type,
         // Pagination
         // const startIndex = (page - 1) * limit;
         // const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
-
+        const totalRecords = fullProducts.length;
         return {
             status: 200,
             products: fullProducts,
             currentPage: page,
             totalPages,
+            totalRecords,
             limit
         };
     } catch (err) {
@@ -480,10 +485,11 @@ exports.searchProduct = async (name) => {
                 };
             })
         );
-
+        const totalRecords = customProducts.length;
         return {
             status: 200,
-            customProducts
+            customProducts,
+            totalRecords
         };
     } catch (err) {
         console.error(err);

@@ -27,7 +27,7 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
-
+const default_avatar_image = './defaultImage/default_user.jpg'
 
 
 router.post('/admin/users/create', authenticateToken, upload.single('image'), async (req, res) => {
@@ -77,6 +77,12 @@ router.post('/admin/users/create', authenticateToken, upload.single('image'), as
         // Chỉ xử lý ảnh nếu có file được upload
         if (req.file) {
             const imagePath = req.file.path;
+            const uploadResult = await cloudinary.uploader.upload(imagePath, {
+                folder: "avatars"
+            });
+            imageUrl = uploadResult.secure_url;
+        }else{
+            const imagePath = default_avatar_image;
             const uploadResult = await cloudinary.uploader.upload(imagePath, {
                 folder: "avatars"
             });
@@ -293,11 +299,12 @@ router.get('/admin/users/get', authenticateToken, async (req, res) => {
 
         // Tính tổng số trang
         const totalPages = Math.ceil(total / parseInt(limit, 10));
-
+        const totalRecords = users.length;
         res.status(200).json({
             users,
             currentPage: parseInt(page, 10),
             limit: parseInt(limit, 10),
+            totalRecords,
             totalPages,
         });
     } catch (error) {

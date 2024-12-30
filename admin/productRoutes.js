@@ -28,6 +28,7 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
+const default_product_image = './defaultImage/default_product.jpg';
 // Tạo sp mới
 router.post('/admin/products/create', authenticateToken, upload.single('image'), async (req, res) => {
     const id_role = req.user.id_role;
@@ -63,7 +64,7 @@ router.post('/admin/products/create', authenticateToken, upload.single('image'),
             } = req.body;
 
             // Lấy đường dẫn của ảnh đã upload
-            const imagePathPet = req.file ? req.file.path : null;
+            const imagePathPet = req.file ? req.file.path : default_product_image;
 
             // Thêm sản phẩm vào cơ sở dữ liệu
             try {
@@ -106,7 +107,7 @@ router.post('/admin/products/create', authenticateToken, upload.single('image'),
                 variations_food
             } = req.body;
 
-            const imagePathFood = req.file ? req.file.path : null;
+            const imagePathFood = req.file ? req.file.path : default_product_image;
             // Kiểm tra xem có variations_food hay không
             const foodVariations = variations_food ? JSON.parse(variations_food) : [];
             try {
@@ -141,7 +142,7 @@ router.post('/admin/products/create', authenticateToken, upload.single('image'),
                 variations_supplies
             } = req.body;
 
-            const imagePathSupplies = req.file ? req.file.path : null;
+            const imagePathSupplies = req.file ? req.file.path : default_product_image;
             // Kiểm tra xem có variations_food hay không
             const suppliesVariations = variations_supplies ? JSON.parse(variations_supplies) : [];
             try {
@@ -384,6 +385,75 @@ router.put('/admin/products/delete', authenticateToken, async (req, res) => {
     } finally {
     }
 });
+//Undelete product
+router.put('/admin/products/unDelete', authenticateToken, upload.none(), async (req, res) => {
+    const id_role = req.user.id_role;
+
+    // Kiểm tra quyền truy cập
+    if (id_role !== 2) {
+        return res.status(403).json({ message: "Bạn không có quyền truy cập" });
+    }
+    console.log("Body:", req.body);
+
+    const { id_product, category } = req.body;
+
+    if (!id_product || !category) {
+        return res.status(400).json();
+    }
+
+    try {
+        // Kết nối đến database
+        const client = getClient();
+        const database = client.db("PBL6");
+        // Cập nhật status = 0 trong collection products
+        const productsCollection = database.collection("products");
+        const updateProductResult = await productsCollection.updateOne(
+            { _id: id_product },
+            { $set: { status: 1 } }
+        );
+
+        if (updateProductResult.matchedCount === 0) {
+            console.log("Ko tìm thấy sp")
+            return res.status(400).json(); // Ko tìm thấy
+        }
+
+        // Thực hiện cập nhật status = 0 trong category tương ứng
+        switch (category) {
+            case 'pets':
+                const petsCollection = database.collection("pets");
+                await petsCollection.updateMany(
+                    { id_product },
+                    { $set: { status: 1 } }
+                );
+                console.log("Updated status to 1 in pets category");
+                break;
+            case 'foods':
+                const foodsCollection = database.collection("foods");
+                await foodsCollection.updateMany(
+                    { id_product },
+                    { $set: { status: 1 } }
+                );
+                console.log("Updated status to 1 in foods category");
+                break;
+            case 'supplies':
+                const suppliesCollection = database.collection("supplies");
+                await suppliesCollection.updateMany(
+                    { id_product },
+                    { $set: { status: 1 } }
+                );
+                console.log("Updated status to 1 in supplies category");
+                break;
+            default:
+                return res.status(400).json(); //Category ko hợp lệ
+        }
+
+        return res.status(200).json();
+    } catch (err) {
+        console.error("Error updating product status:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    } finally {
+    }
+});
 // Cập nhật ảnh cho sp
 router.put('/admin/products/image', authenticateToken, upload.single('image'), async (req, res) => {
     const id_role = req.user.id_role;
@@ -402,7 +472,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
     // Xử lý theo nameTag
     switch (category) {
         case 'pets':
-            const imagePathPet = req.file ? req.file.path : null;
+            const imagePathPet = req.file ? req.file.path : default_product_image;
             try {
                 const result = await updatePetImage(
                     imagePathPet,
@@ -420,7 +490,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
             break;
 
         case 'foods':
-            const imagePathFood = req.file ? req.file.path : null;
+            const imagePathFood = req.file ? req.file.path : default_product_image;
             try {
                 const result = await updateFoodImage(
                     imagePathFood,
@@ -438,7 +508,7 @@ router.put('/admin/products/image', authenticateToken, upload.single('image'), a
             break;
 
         case 'supplies':
-            const imagePathSupplies = req.file ? req.file.path : null;
+            const imagePathSupplies = req.file ? req.file.path : default_product_image;
             try {
                 const result = await updateSuppliesImage(
                     imagePathSupplies,
@@ -568,11 +638,12 @@ router.get('/admin/products/pets', authenticateToken, async (req, res) => {
                 return sortBy === 'price' ? a.price - b.price : b.price - a.price;
             });
         }
-
+        const totalRecords = fullProducts.length;
         res.json({
             products: fullProducts,
             currentPage: page,
             totalPages,
+            totalRecords,
             limit
         });
     } catch (error) {
@@ -595,7 +666,7 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         const foodsCollection = database.collection('foods');
 
         // Query parameters
-        const search = req.query.search?.toLowerCase() || 'all';  
+        const search = req.query.search?.toLowerCase() || 'all';
         const ingredient = req.query.ingredient?.toLowerCase() || 'all';
         const weightQuery = req.query.weight || 'all';
         const categories = req.query.category ? req.query.category.split(',').map(c => c.toLowerCase()) : [];
@@ -750,11 +821,12 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         // Pagination
         // const startIndex = (page - 1) * limit;
         // const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
-
+        const totalRecords = fullProducts.length;
         res.json({
             products: fullProducts,
             currentPage: page,
             totalPages,
+            totalRecords,
             limit,
         });
     } catch (err) {
@@ -779,7 +851,7 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         const suppliesCollection = database.collection('supplies');
 
         // Query parameters
-        const search = req.query.search?.toLowerCase() || 'all';  
+        const search = req.query.search?.toLowerCase() || 'all';
         const category = req.query.category?.toLowerCase() || 'all';
         const sortBy = req.query.sortBy || 'default';
         const color = req.query.color?.toLowerCase();
@@ -799,9 +871,13 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         if (category !== 'all') {
             supplyFilters.type = { $regex: new RegExp(category, 'i') };
         }
+        // if (color) {
+        //     supplyFilters.color = { $regex: new RegExp(color, 'i') };
+        // }
         if (color) {
-            supplyFilters.color = { $regex: new RegExp(color, 'i') };
+            supplyFilters.color = { $regex: color, $options: 'i' }; // 'i' để không phân biệt hoa thường
         }
+
         if (size) {
             supplyFilters.size = { $regex: new RegExp(size, 'i') };
         }
@@ -923,11 +999,12 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         // Pagination
         // const startIndex = (page - 1) * limit;
         // const paginatedProducts = fullProducts.slice(startIndex, startIndex + limit);
-
+        const totalRecords = fullProducts.length;
         res.json({
             products: fullProducts,
             currentPage: page,
             totalPages,
+            totalRecords,
             limit,
         });
     } catch (err) {
@@ -1025,7 +1102,8 @@ router.get('/admin/products/search', authenticateToken, async (req, res) => {
         );
         // Sắp xếp sản phẩm: status = 1 (trước), status = 0 (sau)
         customProducts.sort((a, b) => b.status - a.status);
-        res.status(200).json(customProducts);
+        const totalRecords = customProducts.length;
+        res.status(200).json({ customProducts, totalRecords });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Internal Server Error' });
@@ -1100,8 +1178,8 @@ router.get('/admin/products/searchByName', authenticateToken, async (req, res) =
                 });
             }
         }
-
-        res.status(200).json(productVariants);
+        const totalRecords = productVariants.length;
+        res.status(200).json({ productVariants, totalRecords });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Internal Server Error' });
@@ -1199,7 +1277,7 @@ router.get('/admin/products/foods/:id', authenticateToken, async (req, res) => {
         }
 
         // Lấy tất cả variations của sản phẩm từ bảng foods
-        const allVariations = await foodsCollection.find({ id_product: product._id}).toArray();
+        const allVariations = await foodsCollection.find({ id_product: product._id }).toArray();
 
         // Xử lý variations_food
         const variationsFood = allVariations.map(variation => ({
@@ -1316,4 +1394,5 @@ router.get('/admin/products/pets/:id', authenticateToken, async (req, res) => {
     } finally {
     }
 });
+
 module.exports = router;

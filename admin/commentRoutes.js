@@ -10,7 +10,7 @@ router.get('/admin/comments', async (req, res) => {
     const status = req.query.status ? parseInt(req.query.status) : [0, 1, 2]; // Default to [0, 1, 2] if status is not provided
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
-
+    console.log("star", star);
     try {
         const client = getClient();
         const db = client.db("PBL6");
@@ -74,11 +74,13 @@ router.get('/admin/comments', async (req, res) => {
             status: comment.status,
             dateCreated: comment.time,
         }));
+        const totalRecords = customizedComments.length;
 
         res.status(200).json({
             comments: customizedComments,
             currentPage: page,
             totalPages: Math.ceil(await commentsCollection.countDocuments(filters) / limit),
+            totalRecords,
             limit
         });
     } catch (error) {
@@ -86,8 +88,6 @@ router.get('/admin/comments', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error });
     }
 });
-
-
 
 router.put("/admin/comments/status", authenticateToken, async (req, res) => {
     const id_role = req.user.id_role;
