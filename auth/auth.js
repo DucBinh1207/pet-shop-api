@@ -12,7 +12,7 @@ require("dotenv").config();
 const redisClient = require("../middleware/redisClient");
 const redis = redisClient.init();
 const { getClient } = require("../db");
-
+const default_avatar_image = './defaultImage/default_user.jpg'
 // Hash the password for registration
 async function registerUser(email, id_role) {
   try {
@@ -54,6 +54,7 @@ async function registerUser(email, id_role) {
       password: "",
       id_role: 1,
       token_created_at: tokenCreatedAt,
+      image: default_avatar_image,
       status: USER_STATUS.NULL_PASS,
       is_verified: false,
     };

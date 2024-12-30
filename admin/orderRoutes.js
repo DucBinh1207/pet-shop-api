@@ -84,12 +84,13 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
             date_created: order.date,
             status: order.status,
         }));
-
+        const totalRecords = completeOrderItems.length;
         res.status(200).json({
             orders: completeOrderItems,
             //totalOrders,
             totalPages,
             currentPage: page,
+            totalRecords
         }); // Trả về danh sách orders kèm thông tin phân trang
     } catch (error) {
         console.error("Error loading orders:", error); // In ra lỗi nếu có

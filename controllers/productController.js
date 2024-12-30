@@ -7,7 +7,7 @@ exports.getPet = async (req, res) => {
     const minPrice = parseFloat(req.query.minPrice) || 0;
     const maxPrice = parseFloat(req.query.maxPrice) || Number.MAX_SAFE_INTEGER;
     const page = parseInt(req.query.page) || 1;
-    const limit = 10;
+    const limit = parseInt(req.query.limit) || 10;
     try {
         const result = await productBO.getPet(category, breeds, sortBy,
             minPrice, maxPrice, page, limit);
@@ -23,6 +23,7 @@ exports.getPet = async (req, res) => {
                         products: result.products,
                         currentPage: result.currentPage,
                         totalPages: result.totalPages,
+                        totalRecords: result.totalRecords,
                         limit: result.limit,
                     });
             }
@@ -58,6 +59,7 @@ exports.getFood = async (req, res) => {
                         products: result.products,
                         currentPage: result.currentPage,
                         totalPages: result.totalPages,
+                        totalRecords: result.totalRecords,
                         limit: result.limit,
                     });
             }
@@ -95,6 +97,7 @@ exports.getSupplies = async (req, res) => {
                         products: result.products,
                         currentPage: result.currentPage,
                         totalPages: result.totalPages,
+                        totalRecords: result.totalRecords,
                         limit: result.limit,
                     });
             }
@@ -121,9 +124,10 @@ exports.searchProduct = async (req, res) => {
             if (result.message) {
                 res.status(result.status).json({ message: result.message });
             } else {
-                res.status(result.status).json(
-                    result.customProducts
-                );
+            res.status(result.status).json({
+                customProducts: result.customProducts,
+                totalRecords: result.totalRecords
+            });
             }
         }
     } catch (err) {
