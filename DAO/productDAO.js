@@ -133,10 +133,12 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
         };
 
         // Filter by ingredient
+        // if (ingredient !== 'all') {
+        //     foodFilters['ingredient'] = { $regex: new RegExp(ingredient, 'i') };
+        // }
         if (ingredient !== 'all') {
-            foodFilters['ingredient'] = { $regex: new RegExp(ingredient, 'i') };
+            foodFilters['ingredient'] = { $regex: ingredient, $options: 'i' };
         }
-
         // Filter by weight (normalize both query and DB values)
         if (weightQuery !== 'all') {
             const normalizedWeightQuery = parseInt(weightQuery.replace(/\D/g, ''), 10); // Extract numeric value from weight query
