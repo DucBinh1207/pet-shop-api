@@ -2,10 +2,11 @@
 const commentBO = require("../BO/commentBO");
 
 exports.addComment = async (req, res) => {
-    const { id_product, rating, content } = req.body;
+    const { id_product, star, content } = req.body;
     const userId = req.user.userId;
+    console.log(req.body);
     try {
-        const result = await commentBO.addComment(id_product, rating, content, userId);
+        const result = await commentBO.addComment(id_product, star, content, userId);
 
         if (result.status === 500) {
             res.status(result.status).json({ message: result.message, error: result.error });
