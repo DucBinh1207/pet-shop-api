@@ -4,19 +4,19 @@ const { v4: uuidv4 } = require('uuid');
 const { getClient } = require("../db");
 const EnrichedComment = require('../BEAN/EnrichedComment');
 
-exports.addComment = async (id_product, rating, content, userId) => {
+exports.addComment = async (id_product, star, content, userId) => {
     try {
         const client = getClient();
         const db = client.db("PBL6");
         const commentsCollection = db.collection("comments");
         const productsCollection = db.collection("products");
-
+        const normalizedRating = parseInt(star, 10);
         // Thêm nhận xét mới
         const newComment = {
             _id: uuidv4(),
             userId,
             id_product,
-            star: Number(rating),
+            star: normalizedRating,
             content,
             status: 2,
             time: new Date(),
