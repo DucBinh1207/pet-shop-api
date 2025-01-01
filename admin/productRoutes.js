@@ -688,7 +688,15 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
         //     foodFilters['ingredient'] = { $regex: new RegExp(ingredient, 'i') };
         // }
         if (ingredient !== 'all') {
-            foodFilters['ingredient'] = { $regex: ingredient, $options: 'i' };
+            if (ingredient == 'khác') {
+                foodFilters['ingredient'] = {
+                    $not: { $regex: 'Bò|Gà|Heo|Cá', $options: 'i' }
+                };
+            } else {
+                foodFilters['ingredient'] = {
+                    $regex: ingredient, $options: 'i'
+                };
+            }
         }
         // Filter by weight (normalize both query and DB values)
         if (weightQuery !== 'all') {
@@ -856,7 +864,7 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         const search = req.query.search?.toLowerCase() || 'all';
         const category = req.query.category?.toLowerCase() || 'all';
         const sortBy = req.query.sortBy || 'default';
-        const color = req.query.color?.toLowerCase();
+        const color = req.query.color?.toLowerCase() || 'all';
         const status = parseInt(req.query.status) || 1; // 1: all, 2: còn hàng, 3: hết hàng, 4: bị xóa
         const size = req.query.size?.toLowerCase();
         const type = req.query.type?.toLowerCase();
@@ -876,10 +884,21 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
         // if (color) {
         //     supplyFilters.color = { $regex: new RegExp(color, 'i') };
         // }
-        if (color) {
-            supplyFilters.color = { $regex: color, $options: 'i' }; // 'i' để không phân biệt hoa thường
+        // if (color) {
+        //     supplyFilters.color = { $regex: color, $options: 'i' }; // 'i' để không phân biệt hoa thường
+        // }
+        console.log({color})
+        if (color !== 'all') {
+            if (color == 'khác') {
+                supplyFilters.color = { 
+                    $nin: ['Đen', 'Trắng', 'Đỏ', 'Vàng', 'Cam', 'Lam', 'Lục', 'Tím', 'Hồng'] 
+                };
+            } else {
+                supplyFilters.color = { 
+                    $regex: color, $options: 'i' 
+                };
+            }
         }
-
         if (size) {
             supplyFilters.size = { $regex: new RegExp(size, 'i') };
         }
