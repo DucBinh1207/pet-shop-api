@@ -74,7 +74,7 @@ exports.getFood = async (req, res) => {
 exports.getSupplies = async (req, res) => {
     const category = req.query.category?.toLowerCase() || 'all';
     const sortBy = req.query.sortBy || 'default';
-    const color = req.query.color?.toLowerCase();
+    const color = req.query.color?.toLowerCase() || 'all';
     const size = req.query.size?.toLowerCase();
     const type = req.query.type; // Thêm type vào query parameters
     const minPrice = parseFloat(req.query.minPrice) || 0;
