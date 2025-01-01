@@ -90,7 +90,7 @@ router.get("/admin/orders", authenticateToken, async (req, res) => {
             //totalOrders,
             totalPages,
             currentPage: page,
-            totalRecords
+            totalRecords: totalOrders
         }); // Trả về danh sách orders kèm thông tin phân trang
     } catch (error) {
         console.error("Error loading orders:", error); // In ra lỗi nếu có

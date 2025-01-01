@@ -104,7 +104,7 @@ exports.getPet = async (category, breeds, sortBy,
             products: fullProducts,
             currentPage: page,
             totalPages,
-            totalRecords,
+            totalRecords: totalProducts,
             limit
         };
 
@@ -258,7 +258,7 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
             products: sortedProducts,
             currentPage: page,
             totalPages,
-            totalRecords,
+            totalRecords: totalProducts,
             limit
         };
     } catch (err) {
@@ -416,7 +416,7 @@ exports.getSupplies = async (category, sortBy, color, size, type,
             products: fullProducts,
             currentPage: page,
             totalPages,
-            totalRecords,
+            totalRecords: totalProducts,
             limit
         };
     } catch (err) {

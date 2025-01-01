@@ -643,7 +643,7 @@ router.get('/admin/products/pets', authenticateToken, async (req, res) => {
             products: fullProducts,
             currentPage: page,
             totalPages,
-            totalRecords,
+            totalRecords: totalProducts,
             limit
         });
     } catch (error) {
@@ -836,7 +836,7 @@ router.get('/admin/products/foods', authenticateToken, async (req, res) => {
             products: fullProducts,
             currentPage: page,
             totalPages,
-            totalRecords,
+            totalRecords: totalProducts,
             limit,
         });
     } catch (err) {
@@ -1025,7 +1025,7 @@ router.get('/admin/products/supplies', authenticateToken, async (req, res) => {
             products: fullProducts,
             currentPage: page,
             totalPages,
-            totalRecords,
+            totalRecords: totalProducts,
             limit,
         });
     } catch (err) {
