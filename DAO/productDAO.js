@@ -136,9 +136,19 @@ exports.getFood = async (ingredient, weightQuery, sortBy,
         // if (ingredient !== 'all') {
         //     foodFilters['ingredient'] = { $regex: new RegExp(ingredient, 'i') };
         // }
+        console.log({ingredient});  
         if (ingredient !== 'all') {
-            foodFilters['ingredient'] = { $regex: ingredient, $options: 'i' };
+            if (ingredient == 'khác') {
+                foodFilters['ingredient'] = {
+                    $not: { $regex: 'Bò|Gà|Heo|Cá', $options: 'i' }
+                };
+            } else {
+                foodFilters['ingredient'] = {
+                    $regex: ingredient, $options: 'i'
+                };
+            }
         }
+
         // Filter by weight (normalize both query and DB values)
         if (weightQuery !== 'all') {
             const normalizedWeightQuery = parseInt(weightQuery.replace(/\D/g, ''), 10); // Extract numeric value from weight query
@@ -280,9 +290,21 @@ exports.getSupplies = async (category, sortBy, color, size, type,
         // if (color) {
         //     supplyFilters.color = { $regex: new RegExp(color, 'i') };
         // }
-        if (color) {
-            supplyFilters.color = { $regex: color, $options: 'i' }; // 'i' để không phân biệt hoa thường
+        // if (color) {
+        //     supplyFilters.color = { $regex: color, $options: 'i' }; // 'i' để không phân biệt hoa thường
+        // }
+        if (color !== 'all') {
+            if (color == 'khác') {
+                supplyFilters.color = { 
+                    $nin: ['Đen', 'Trắng', 'Đỏ', 'Vàng', 'Cam', 'Lam', 'Lục', 'Tím', 'Hồng'] 
+                };
+            } else {
+                supplyFilters.color = { 
+                    $regex: color, $options: 'i' 
+                };
+            }
         }
+        
         if (size) {
             supplyFilters.size = { $regex: new RegExp(size, 'i') };
         }
