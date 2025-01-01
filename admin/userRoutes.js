@@ -304,7 +304,7 @@ router.get('/admin/users/get', authenticateToken, async (req, res) => {
             users,
             currentPage: parseInt(page, 10),
             limit: parseInt(limit, 10),
-            totalRecords,
+            totalRecords: total,
             totalPages,
         });
     } catch (error) {
