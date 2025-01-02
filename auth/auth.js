@@ -12,7 +12,7 @@ require("dotenv").config();
 const redisClient = require("../middleware/redisClient");
 const redis = redisClient.init();
 const { getClient } = require("../db");
-const default_avatar_image = './defaultImage/default_user.jpg'
+const default_avatar_image = 'https://res.cloudinary.com/ds0yzgajv/image/upload/v1735796742/avatars/nx9s7xlxmnfr3peciv2b.jpg'
 // Hash the password for registration
 async function registerUser(email, id_role) {
   try {
