@@ -128,7 +128,7 @@ router.post('/admin/vouchers/create', authenticateToken, async (req, res) => {
             _id: uuidv4(),
             code: code,
             percent: percent,
-            quantity: quantity,
+            quantity: parseInt(quantity, 10),
             status: 1, // Đặt trạng thái active (giả sử status = 1 là active)
             date_created: new Date(),
         };
@@ -164,7 +164,7 @@ router.put('/admin/vouchers/update', authenticateToken, async (req, res) => {
         const client = getClient();
         const db = client.db("PBL6");
         const vouchersCollection = db.collection("vouchers");
-
+        quantity = parseInt(quantity, 10);
         // Tìm và cập nhật người dùng
         const updateData = {
             code,

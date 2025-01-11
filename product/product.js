@@ -44,7 +44,7 @@ async function checkProductStockForCart(id_product_variant, category, quantity) 
             product = await db.collection("pets").findOne({ _id: id_product_variant });
         }
 
-        if (product && product.quantity > quantity) {
+        if (product && product.quantity >= quantity) {
             return { success: true };
         }
 
