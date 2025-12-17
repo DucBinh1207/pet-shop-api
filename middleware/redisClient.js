@@ -8,7 +8,7 @@ class redisClient {
     }
 
     this.client = redis.createClient({
-      url: `redis://default:5YSnFx4YhyVgpkoqWdR2Tbd0wqXKyAMv@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+      url: `redis://default:zIvIMkRFEuWC1EcYlT4qAiIoxrwac1n8@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
     });
 
     this.client.on("error", (err) => {

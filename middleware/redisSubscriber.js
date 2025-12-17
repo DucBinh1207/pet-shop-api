@@ -2,11 +2,11 @@ const redis = require("redis");
 
 const listenForExpirationEvents = async (callback) => {
   const subscriber = redis.createClient({
-    url: `redis://default:5YSnFx4YhyVgpkoqWdR2Tbd0wqXKyAMv@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    url: `redis://default:zIvIMkRFEuWC1EcYlT4qAiIoxrwac1n8@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
   });
 
   const redisClient = redis.createClient({
-    url: `redis://default:5YSnFx4YhyVgpkoqWdR2Tbd0wqXKyAMv@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    url: `redis://default:zIvIMkRFEuWC1EcYlT4qAiIoxrwac1n8@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
   });
 
   try {
